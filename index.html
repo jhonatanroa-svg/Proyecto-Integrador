@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard · Producción Petrolera</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --accent-green: #00e5a0;
+    --accent-blue: #3b9eff;
+    --accent-pink: #ff6eb4;
+    --accent-amber: #ffb830;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --red-line: #ff4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; }
+
+  /* HEADER */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #00e5a0, #3b9eff); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .topbar h1 { font-size: 15px; font-weight: 500; letter-spacing: 0.02em; }
+  .topbar p { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .status-pill { font-size: 11px; font-family: var(--font-mono); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); }
+  .status-pill.ok { border-color: var(--accent-green); color: var(--accent-green); }
+  .status-pill.err { border-color: var(--red-line); color: var(--red-line); }
+
+  /* CONTROLS */
+  .controls-bar {
+    display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+    padding: 1rem 2rem; background: var(--bg2); border-bottom: 1px solid var(--border);
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-group label { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+  select {
+    background: var(--bg3); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 28px 6px 10px; font-size: 13px;
+    font-family: var(--font-mono); cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  select:focus { outline: none; border-color: var(--accent-green); }
+
+  /* MAIN LAYOUT */
+  .main { padding: 1.5rem 2rem; }
+
+  /* METRICS */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .metric {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    position: relative; overflow: hidden;
+  }
+  .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .metric.green::before { background: var(--accent-green); }
+  .metric.blue::before { background: var(--accent-blue); }
+  .metric.pink::before { background: var(--accent-pink); }
+  .metric.amber::before { background: var(--accent-amber); }
+  .metric.gray::before { background: var(--text-muted); }
+  .metric-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .metric-val { font-size: 26px; font-weight: 300; color: var(--text); font-family: var(--font-mono); line-height: 1; }
+  .metric-unit { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+
+  /* CHARTS */
+  .chart-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  .chart-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem;
+  }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .chart-title { font-size: 12px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .chart-wrap { position: relative; width: 100%; height: 280px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+  .two-col .chart-wrap { height: 180px; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } .main { padding: 1rem; } .topbar, .controls-bar { padding: 1rem; } }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 3rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
+  .lift-tag { display: inline-block; font-size: 10px; font-family: var(--font-mono); padding: 2px 6px; border-radius: 4px; background: rgba(255,184,48,0.15); color: var(--accent-amber); border: 1px solid rgba(255,184,48,0.3); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-icon">🛢</div>
+    <div>
+      <h1>Dashboard de Producción Petrolera</h1>
+      <p>Diagnóstico dinámico multifásico · Flujo diario por pozo</p>
+    </div>
+  </div>
+  <div id="statusPill" class="status-pill">Cargando...</div>
+</div>
+
+<div class="controls-bar" id="controlsBar" style="display:none;">
+  <div class="ctrl-group">
+    <label>Pozo</label>
+    <select id="wellSel"></select>
+  </div>
+  <div class="ctrl-group">
+    <label>Variable</label>
+    <select id="varSel">
+      <option value="all">Oil · Water · Gas</option>
+      <option value="oil">Solo petróleo</option>
+      <option value="water">Solo agua</option>
+      <option value="gas">Solo gas</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+  <div id="loadingMsg" class="loading">Conectando con Google Sheets...</div>
+
+  <div id="dashboard" style="display:none;">
+    <div class="metrics-grid">
+      <div class="metric green">
+        <div class="metric-label">Oil rate avg</div>
+        <div class="metric-val" id="mOil">—</div>
+        <div class="metric-unit">bbl/d</div>
+      </div>
+      <div class="metric blue">
+        <div class="metric-label">Water rate avg</div>
+        <div class="metric-val" id="mWater">—</div>
+        <div class="metric-unit">bbl/d</div>
+      </div>
+      <div class="metric pink">
+        <div class="metric-label">Gas rate avg</div>
+        <div class="metric-val" id="mGas">—</div>
+        <div class="metric-unit">mscf/d</div>
+      </div>
+      <div class="metric amber">
+        <div class="metric-label">Lift system</div>
+        <div class="metric-val" id="mLift" style="font-size:14px; padding-top:6px;">—</div>
+        <div class="metric-unit">último registrado</div>
+      </div>
+      <div class="metric gray">
+        <div class="metric-label">Registros</div>
+        <div class="metric-val" id="mRecs">—</div>
+        <div class="metric-unit">días</div>
+      </div>
+      <div class="metric gray">
+        <div class="metric-label">Cambios lift</div>
+        <div class="metric-val" id="mChanges">—</div>
+        <div class="metric-unit">eventos</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title" id="mainTitle">Tasas multifásicas</span>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-dot" style="background:#00e5a0;"></span>Oil</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#3b9eff;"></span>Water</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff6eb4;"></span>Gas</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff4444; width:3px; height:10px;"></span>Cambio lift</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartMain" role="img" aria-label="Tasas de producción multifásica por pozo"></canvas>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Water cut (%)</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartWC" role="img" aria-label="Water cut porcentaje"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">GOR (mscf/bbl)</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartGOR" role="img" aria-label="Gas oil ratio"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_rlq6VhoU4fgWduJN1tTabZXLORDQpjYOxahQIBNiFHC6KQ2Kqi8hG4NvIIlRSnfEzr-yKm9K7EAa/pub?gid=1809707117&single=true&output=csv";
+
+let allData = [], chartMain, chartWC, chartGOR;
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    cols.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (cols[i] || '').replace(/^"|"$/g, '').trim());
+    return obj;
+  });
+}
+
+function setStatus(msg, state) {
+  const el = document.getElementById('statusPill');
+  el.textContent = msg;
+  el.className = 'status-pill ' + (state || '');
+}
+
+async function loadData() {
+  try {
+    setStatus('Cargando...', '');
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    allData = parseCSV(text).filter(r => {
+      const wt = (r['Well_Type'] || '').toLowerCase();
+      return !wt || wt === 'producer' || wt === 'productor';
+    });
+    if (!allData.length) throw new Error('Sin registros');
+    setStatus('● ' + allData.length + ' registros', 'ok');
+    buildUI();
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'err');
+    document.getElementById('loadingMsg').textContent = 'No se pudieron cargar los datos. Verifica que el Google Sheet esté publicado como CSV.';
+  }
+}
+
+function buildUI() {
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('controlsBar').style.display = 'flex';
+
+  const wells = [...new Set(allData.map(r => r['Well_ID']))].sort();
+  const sel = document.getElementById('wellSel');
+  wells.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; sel.appendChild(o); });
+  sel.addEventListener('change', render);
+  document.getElementById('varSel').addEventListener('change', render);
+  render();
+}
+
+function getWellData() {
+  return allData.filter(r => r['Well_ID'] === document.getElementById('wellSel').value)
+    .sort((a,b) => new Date(a['Date']) - new Date(b['Date']));
+}
+
+function avg(arr) { return arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : 0; }
+
+function detectLifts(data) {
+  return data.reduce((acc, r, i) => {
+    if (i > 0 && r['Lift_system'] && data[i-1]['Lift_system'] && r['Lift_system'] !== data[i-1]['Lift_system'])
+      acc.push({ idx: i, system: r['Lift_system'] });
+    return acc;
+  }, []);
+}
+
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { maxTicksLimit: 8, font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } },
+    y: { ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }
+  }
+};
+
+function liftAnnotations(liftChanges, maxVal) {
+  return liftChanges.map(c => ({
+    type: 'line', scaleID: 'x', value: c.idx,
+    borderColor: '#ff4444', borderWidth: 1, borderDash: [4, 3]
+  }));
+}
+
+function render() {
+  const data = getWellData();
+  if (!data.length) return;
+
+  const varMode = document.getElementById('varSel').value;
+  const well = document.getElementById('wellSel').value;
+  const dates = data.map(r => r['Date']);
+  const oil   = data.map(r => parseFloat(r['Oil_rate_bbl_d']) || 0);
+  const water = data.map(r => parseFloat(r['Water_rate_bbl_d']) || 0);
+  const gas   = data.map(r => parseFloat(r['Gas_rate_mscf_d']) || 0);
+  const lifts = detectLifts(data);
+
+  document.getElementById('mOil').textContent = avg(oil).toFixed(1);
+  document.getElementById('mWater').textContent = avg(water).toFixed(1);
+  document.getElementById('mGas').textContent = avg(gas).toFixed(1);
+  document.getElementById('mLift').textContent = data[data.length-1]['Lift_system'] || '—';
+  document.getElementById('mRecs').textContent = data.length;
+  document.getElementById('mChanges').textContent = lifts.length;
+  document.getElementById('mainTitle').textContent = 'Tasas multifásicas — ' + well;
+
+  const mkLine = (data, color, dash, yAxis) => ({
+    data, borderColor: color, backgroundColor: color + '15',
+    borderWidth: 2, pointRadius: 0, tension: 0.3,
+    borderDash: dash || [], fill: false,
+    yAxisID: yAxis || 'y'
+  });
+
+  const datasets = [];
+  if (varMode === 'all' || varMode === 'oil')   datasets.push({ ...mkLine(oil,   '#00e5a0', [],    varMode==='all'?'y':'y'),  label: 'Oil' });
+  if (varMode === 'all' || varMode === 'water') datasets.push({ ...mkLine(water, '#3b9eff', [],    varMode==='all'?'y2':'y'), label: 'Water' });
+  if (varMode === 'all' || varMode === 'gas')   datasets.push({ ...mkLine(gas,   '#ff6eb4', [5,3], varMode==='all'?'y3':'y'), label: 'Gas' });
+
+  const liftDatasets = lifts.map(c => ({
+    data: dates.map((_,i) => i === c.idx ? (Math.max(...oil, ...water) * 1.05) : null),
+    borderColor: '#ff4444', borderWidth: 1, borderDash: [4,3],
+    pointRadius: 0, fill: false, label: '', yAxisID: 'y', tension: 0
+  }));
+
+  const scales = {
+    x: chartDefaults.scales.x,
+    y: { ...chartDefaults.scales.y, position: 'left', ticks: { ...chartDefaults.scales.y.ticks, color: '#00e5a0' } }
+  };
+  if (varMode === 'all') {
+    scales.y2 = { position: 'right', ticks: { font: { size: 10 }, color: '#3b9eff' }, grid: { drawOnChartArea: false }, border: { color: 'rgba(255,255,255,0.07)' } };
+    scales.y3 = { position: 'right', ticks: { font: { size: 10 }, color: '#ff6eb4' }, grid: { drawOnChartArea: false }, border: { color: 'rgba(255,255,255,0.07)' } };
+  }
+
+  if (chartMain) chartMain.destroy();
+  chartMain = new Chart(document.getElementById('chartMain'), {
+    type: 'line',
+    data: { labels: dates, datasets: [...datasets, ...liftDatasets] },
+    options: { ...chartDefaults, scales }
+  });
+
+  const wc  = oil.map((o,i) => (o+water[i])>0 ? parseFloat(((water[i]/(o+water[i]))*100).toFixed(1)) : 0);
+  const gor = oil.map((o,i) => o>0 ? parseFloat((gas[i]/o).toFixed(2)) : 0);
+
+  const smallOpts = {
+    ...chartDefaults,
+    scales: { x: { ...chartDefaults.scales.x, ticks: { maxTicksLimit: 5, font: { size: 9 }, color: '#6b7280' } }, y: chartDefaults.scales.y }
+  };
+
+  if (chartWC) chartWC.destroy();
+  chartWC = new Chart(document.getElementById('chartWC'), {
+    type: 'line',
+    data: { labels: dates, datasets: [{ data: wc, borderColor: '#3b9eff', backgroundColor: '#3b9eff18', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true }] },
+    options: smallOpts
+  });
+
+  if (chartGOR) chartGOR.destroy();
+  chartGOR = new Chart(document.getElementById('chartGOR'), {
+    type: 'line',
+    data: { labels: dates, datasets: [{ data: gor, borderColor: '#ff6eb4', backgroundColor: '#ff6eb418', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true }] },
+    options: smallOpts
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>
