@@ -79,7 +79,7 @@ select{padding-right:28px;appearance:none;
 .leg-dot{width:8px;height:8px;border-radius:2px;}
 .chart-wrap{position:relative;width:100%;height: 250px;}
 
-.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:1rem;}
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:1rem;padding:2rem;text-align:center;}
 .loader{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
@@ -91,8 +91,8 @@ select{padding-right:28px;appearance:none;
 
 <div class="loading-screen" id="loadingScreen">
   <div class="loader"></div>
-  <h2>Sincronizando Sistema Hidrodinámico...</h2>
-  <p id="loadingMsg">Consumiendo predicciones de la API LSTM local...</p>
+  <h2 style="margin-top:10px;">Sincronizando Sistema Hidrodinámico...</h2>
+  <p id="loadingMsg" style="color:var(--dim); font-family:var(--mono); margin-top:8px; font-size:13px;">Consumiendo predicciones de la API LSTM activa en http://127.0.0.1:5000...</p>
 </div>
 
 <div id="app" style="display:none;">
@@ -202,9 +202,14 @@ function setStatus(msg,state){ const el=document.getElementById('statusPill'); e
 
 async function loadData(){
   try{
-    // Consumimos el JSON directamente desde tu servidor local Flask
-    const response = await fetch(URL_API);
-    if (!response.ok) throw new Error("API desconectada");
+    // Ajuste de CORS y modo de solicitud para escuchar el backend local activo
+    const response = await fetch(URL_API, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) throw new Error("API desconectada o error de respuesta");
     
     dfPred = await response.json();
     
@@ -215,15 +220,22 @@ async function loadData(){
     render();
   } catch(e){
     setStatus('Error: Enciende la celda en PyCharm','err');
-    document.getElementById('loadingMsg').innerHTML = "<span style='color:#ff3c5a;'>No se pudo conectar al servidor local.<br>Por favor, dale Play a la celda en PyCharm e intenta recargar.</span>";
-    console.error(e);
+    document.getElementById('loadingMsg').innerHTML = `
+      <span style='color:#ff3c5a; font-weight:bold; display:block; margin-bottom:10px;'>
+        ⚠️ NO SE PUDO CONECTAR CON TU API DE PYCHARM
+      </span>
+      <span style='color:var(--text); text-align:left; display:inline-block; max-width:500px;'>
+        Tu código de Python ya está arrojando el resultado en <a href="${URL_API}" target="_blank" style="color:var(--blue); font-family:var(--mono);">${URL_API}</a>, pero el navegador bloquea la lectura.<br><br>
+        <strong>Para solucionarlo:</strong> Asegúrate de que en tu script de Python (Flask) tengas instalada e importada la librería <code>flask_cors</code> y que tu app tenga la línea <code>CORS(app)</code> justo debajo de la creación de la aplicación.
+      </span>
+    `;
+    console.error("Error capturado en Fetch:", e);
   }
 }
 
 function buildFilters(){
   const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].filter(Boolean).sort();
   const sel=document.getElementById('wellSel');
-  // Limpiar opciones previas exceptuando "Todos"
   sel.innerHTML = '<option value="ALL">Todos los pozos</option>';
   wells.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent=w;sel.appendChild(o);});
 
@@ -327,8 +339,6 @@ function render(){
   const datesS=dates.filter((_,i)=>i%step===0);
   const oilS=oilVals.filter((_,i)=>i%step===0);
   const waterS=sorted.map(r=>parseFloat(r['Water_rate_bbl_d'])||0).filter((_,i)=>i%step===0);
-  
-  // Al venir de la API integrada, el Gas ya viene acoplado directamente en el registro
   const gasS=sorted.map(r=>parseFloat(r['Gas_rate_mscf_d'])||0).filter((_,i)=>i%step===0);
 
   destroyChart('oilwater');
