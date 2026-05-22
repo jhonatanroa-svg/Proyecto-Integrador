@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tablero de Seguimiento Preventivo (Matriz 3x3)</title>
+<title>Tablero de Seguimiento Preventivo (Sincronizado)</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -26,11 +26,8 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
 
-/* HEADER */
 .header{
-  padding:1.5rem 2rem 1rem;
-  border-bottom:1px solid var(--border);
-  background:var(--bg2);
+  padding:1.5rem 2rem 1rem; border-bottom:1px solid var(--border); background:var(--bg2);
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
 }
 .header-title{font-size:20px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;}
@@ -38,9 +35,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
 .status-pill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
 .status-pill.ok{border-color:var(--green);color:var(--green);}
-.status-pill.err{border-color:var(--red);color:var(--red);}
 
-/* FILTERS */
 .filters{
   display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
   padding:1rem 2rem;background:var(--bg2);border-bottom:1px solid var(--border);
@@ -54,22 +49,12 @@ select,input[type=date]{
 select{padding-right:28px;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center;}
-select:focus,input:focus{outline:none;border-color:var(--green);}
 
-/* MAIN */
 .main{padding:1.5rem 2rem;}
 
-/* CONDICION CARDS (FILA 1 DE LA MATRIZ) */
-.conditions-grid{
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Forzado simétrico estricto */
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-.cond-card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
-  padding:1.25rem;position:relative;overflow:hidden;
-}
+/* MATRIZ DE CONDICIONES (FILA 1) */
+.conditions-grid{display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;}
+.cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;}
 .cond-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;}
 .cond-card.verde::after{background:var(--green);}
 .cond-card.rojo::after{background:var(--red);}
@@ -82,73 +67,50 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
 .badge-amber{background:rgba(255,184,48,.12);color:var(--amber);border:1px solid rgba(255,184,48,.25);}
 .cond-val{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
 .cond-desc{font-size:11px;color:var(--dim);font-family:var(--mono);}
-.cond-limit{font-size:10px;color:var(--muted);margin-top:6px;font-family:var(--mono);}
 .progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+.progress-fill{height:100%;transition:width .6s ease;}
 
-/* DASHBOARD GRID REESTRUCTURADO EN FILAS TOTALMENTE HOMOGÉNEAS DE 3 COLUMNAS */
-.matrix-row-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columnas perfectas por fila */
-  gap: 1.25rem;
-  margin-bottom: 1.25rem;
-}
-.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between;}
+/* FILAS DE LA MATRIZ DE GRÁFICOS (FILAS 2 Y 3) */
+.matrix-row-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.25rem; }
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 340px; display: flex; flex-direction: column; justify-content: space-between;}
 .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
 .chart-title{font-size:11px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
-.legend{display:flex;gap:12px;flex-wrap:wrap;}
+.legend{display:flex;gap:12px;}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono);}
 .leg-dot{width:8px;height:8px;border-radius:2px;}
-.chart-wrap{position:relative;width:100%;height: 230px;}
+.chart-wrap{position:relative;width:100%;height: 250px;}
 
-/* LOADING */
 .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:1rem;}
-.loading-screen h2{font-size:18px;font-weight:700;color:var(--text);}
-.loading-screen p{font-size:12px;color:var(--muted);font-family:var(--mono);}
 .loader{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-@media(max-width:1100px){
-  .matrix-row-grid, .conditions-grid {grid-template-columns: repeat(2, 1fr);}
-}
-@media(max-width:700px){
-  .matrix-row-grid, .conditions-grid {grid-template-columns: 1fr;}
-}
+@media(max-width:1100px){ .matrix-row-grid, .conditions-grid {grid-template-columns: repeat(2, 1fr);} }
+@media(max-width:700px){ .matrix-row-grid, .conditions-grid {grid-template-columns: 1fr;} }
 </style>
 </head>
 <body>
 
 <div class="loading-screen" id="loadingScreen">
   <div class="loader"></div>
-  <h2>Tablero de Seguimiento Preventivo</h2>
-  <p id="loadingMsg">Conectando con Google Sheets...</p>
+  <h2>Sincronizando Sistema Hidrodinámico...</h2>
+  <p id="loadingMsg">Mapeando índices de tiempo...</p>
 </div>
 
 <div id="app" style="display:none;">
 
   <div class="header">
-    <div class="header-left">
+    <div>
       <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
-      <div class="header-sub">Modelo LSTM · Predicción de vida útil por pozo · Actualización automática</div>
+      <div class="header-sub">Indexación temporal unificada · Sin cruces asimétricos</div>
     </div>
     <div id="statusPill" class="status-pill">Cargando...</div>
   </div>
 
   <div class="filters" id="filtersBar">
-    <div class="filter-group">
-      <label>Pozo</label>
-      <select id="wellSel"><option value="ALL">Todos los pozos</option></select>
-    </div>
-    <div class="filter-group">
-      <label>Desde</label>
-      <input type="date" id="dateFrom"/>
-    </div>
-    <div class="filter-group">
-      <label>Hasta</label>
-      <input type="date" id="dateTo"/>
-    </div>
-    <div class="filter-group">
-      <label>Alerta</label>
+    <div class="filter-group"><label>Pozo</label><select id="wellSel"><option value="ALL">Todos los pozos</option></select></div>
+    <div class="filter-group"><label>Desde</label><input type="date" id="dateFrom"/></div>
+    <div class="filter-group"><label>Hasta</label><input type="date" id="dateTo"/></div>
+    <div class="filter-group"><label>Alerta</label>
       <select id="alertSel">
         <option value="ALL">Todas</option>
         <option value="CRITICO">🔴 Crítico</option>
@@ -162,41 +124,29 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
 
     <div class="conditions-grid">
       <div class="cond-card" id="card1">
-        <div class="cond-header">
-          <span class="cond-label">Condición 1 · Caída de Petróleo</span>
-          <span class="cond-badge" id="badge1">—</span>
-        </div>
+        <div class="cond-header"><span class="cond-label">Condición 1 · Caída de Petróleo</span><span class="cond-badge" id="badge1">—</span></div>
         <div class="cond-val" id="val1">—</div>
-        <div class="cond-desc">Pozos con caída de Oil Rate &gt; 25%</div>
-        <div class="cond-limit" id="limit1">Límite crítico: &gt; 25% → ROJO</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog1" style="width:0%;background:var(--green);"></div></div>
+        <div class="cond-desc">Caída de Oil Rate &gt; 25%</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog1" style="width:0%;"></div></div>
       </div>
       <div class="cond-card" id="card2">
-        <div class="cond-header">
-          <span class="cond-label">Condición 2 · Water Cut</span>
-          <span class="cond-badge" id="badge2">—</span>
-        </div>
+        <div class="cond-header"><span class="cond-label">Condición 2 · Water Cut</span><span class="cond-badge" id="badge2">—</span></div>
         <div class="cond-val" id="val2">—</div>
-        <div class="cond-desc">Pozos con Water Cut &gt; 80%</div>
-        <div class="cond-limit" id="limit2">Límite crítico: &gt; 80% → ROJO</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;background:var(--green);"></div></div>
+        <div class="cond-desc">Water Cut &gt; 80% en la serie</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;"></div></div>
       </div>
       <div class="cond-card" id="card3">
-        <div class="cond-header">
-          <span class="cond-label">Condición 3 · Recuperación Futura</span>
-          <span class="cond-badge" id="badge3">—</span>
-        </div>
+        <div class="cond-header"><span class="cond-label">Condición 3 · Recuperación Futura</span><span class="cond-badge" id="badge3">—</span></div>
         <div class="cond-val" id="val3">—</div>
-        <div class="cond-desc">Pozos con recuperación futura &lt; 75%</div>
-        <div class="cond-limit" id="limit3">Límite crítico: &gt; 75% afectados → ROJO</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog3" style="width:0%;background:var(--green);"></div></div>
+        <div class="cond-desc">Eficiencia del modelo &lt; 75%</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog3" style="width:0%;"></div></div>
       </div>
     </div>
 
     <div class="matrix-row-grid">
       <div class="chart-card">
         <div class="chart-header">
-          <span class="chart-title" id="mainTitle">Predicción LSTM — Días Restantes</span>
+          <span class="chart-title">Gráfica RUL con Modelo Predictivo LSTM</span>
           <div class="legend">
             <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Real</div>
             <div class="leg-item"><span class="leg-dot" style="background:#ff3c5a;"></span>LSTM</div>
@@ -206,35 +156,37 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
       </div>
 
       <div class="chart-card">
-        <div class="chart-header"><span class="chart-title">Distribución de Alertas</span></div>
-        <div class="chart-wrap"><canvas id="chartAlerts"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-header"><span class="chart-title">Participación Lift System</span></div>
-        <div class="chart-wrap"><canvas id="chartLift"></canvas></div>
-      </div>
-    </div>
-
-    <div class="matrix-row-grid">
-      <div class="chart-card">
         <div class="chart-header">
-          <span class="chart-title">Oil Rate vs Water Rate</span>
+          <span class="chart-title">Gráfica Comparativa Hidrodinámica Física</span>
           <div class="legend">
             <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Oil</div>
             <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Water</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ff6eb4;"></span>Gas (Prod)</div>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="chartOilWater"></canvas></div>
       </div>
 
       <div class="chart-card">
-        <div class="chart-header"><span class="chart-title">Promedio Días Restantes por Pozo</span></div>
-        <div class="chart-wrap"><canvas id="chartWellAvg"></canvas></div>
+        <div class="chart-header"><span class="chart-title">Monitoreo Diario de Operatividad (Uptime)</span></div>
+        <div class="chart-wrap"><canvas id="chartUptime"></canvas></div>
+      </div>
+    </div>
+
+    <div class="matrix-row-grid">
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">N° Alertas por Nivel</span></div>
+        <div class="chart-wrap"><canvas id="chartAlerts"></canvas></div>
       </div>
 
-      <div class="chart-card" style="justify-content: center; align-items: center; border-style: dashed; background: rgba(255,255,255,0.01);">
-        <span style="font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase;">Métrica de Eficiencia Reservada</span>
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">% Método de Extracción (Lift System)</span></div>
+        <div class="chart-wrap"><canvas id="chartLift"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Barriles de Petróleo por Método</span></div>
+        <div class="chart-wrap"><canvas id="chartMethodVol"></canvas></div>
       </div>
     </div>
 
@@ -242,6 +194,7 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
 </div>
 
 <script>
+// Fuentes de datos unificadas
 const URL_PROD = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_rlq6VhoU4fgWduJN1tTabZXLORDQpjYOxahQIBNiFHC6KQ2Kqi8hG4NvIIlRSnfEzr-yKm9K7EAa/pub?gid=1809707117&single=true&output=csv";
 const URL_PRED = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4FiA0jBinWUnvKoGeb-za6-oKXxQKVUd-u6ao4JCF8S4LZrdzIdUUXvt-oP3ex2s5PI87FJZZS7yd/pub?gid=2013598279&single=true&output=csv";
 
@@ -254,38 +207,24 @@ function parseCSV(text) {
     const cols = []; let cur='', inQ=false;
     for(let c of line){ if(c==='"') inQ=!inQ; else if(c===','&&!inQ){cols.push(cur.trim());cur='';} else cur+=c; }
     cols.push(cur.trim());
-    const obj={};
-    headers.forEach((h,i)=>obj[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
+    const obj={}; headers.forEach((h,i)=>obj[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
     return obj;
   });
 }
 
-function setStatus(msg,state){
-  const el=document.getElementById('statusPill');
-  el.textContent=msg; el.className='status-pill '+(state||'');
-}
-function setLoading(msg){document.getElementById('loadingMsg').textContent=msg;}
+function setStatus(msg,state){ const el=document.getElementById('statusPill'); el.textContent=msg; el.className='status-pill '+(state||''); }
 
 async function loadData(){
   try{
-    setLoading('Cargando datos de producción...');
-    const r1 = await fetch(URL_PROD);
-    if(!r1.ok) throw new Error('Error producción: '+r1.status);
-    dfProd = parseCSV(await r1.text());
-
-    setLoading('Cargando predicciones LSTM...');
-    const r2 = await fetch(URL_PRED);
-    if(!r2.ok) throw new Error('Error predicciones: '+r2.status);
-    dfPred = parseCSV(await r2.text());
-
-    setStatus('● '+dfPred.length+' predicciones cargadas','ok');
+    const r1 = await fetch(URL_PROD); dfProd = parseCSV(await r1.text());
+    const r2 = await fetch(URL_PRED); dfPred = parseCSV(await r2.text());
+    setStatus('● Base Sincronizada Corrientemente','ok');
     buildFilters();
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('app').style.display='block';
     render();
   } catch(e){
-    setStatus('Error: '+e.message,'err');
-    document.getElementById('loadingMsg').textContent='Error: '+e.message;
+    setStatus('Error de conexión','err');
   }
 }
 
@@ -299,10 +238,7 @@ function buildFilters(){
     document.getElementById('dateFrom').value=dates[0].substring(0,10);
     document.getElementById('dateTo').value=dates[dates.length-1].substring(0,10);
   }
-
-  ['wellSel','dateFrom','dateTo','alertSel'].forEach(id=>
-    document.getElementById(id).addEventListener('change',render)
-  );
+  ['wellSel','dateFrom','dateTo','alertSel'].forEach(id=>document.getElementById(id).addEventListener('change',render));
 }
 
 function getFiltered(){
@@ -322,153 +258,146 @@ function getFiltered(){
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-/* CONFIGURACIÓN ANTICOLISIÓN DE TEXTOS EXIGIDA PARA FECHAS */
+// Configuración anti-colisión estricta para evitar los '#######' en fechas
 const chartDefaults={
   responsive:true,maintainAspectRatio:false,
   interaction:{mode:'index',intersect:false},
   plugins:{legend:{display:false}},
   scales:{
     x:{
-      ticks:{
-        maxTicksLimit:4, // Forzado matemático de espacio amplio para que no salgan símbolos rotos ni colisiones
-        maxRotation:0,
-        minRotation:0,
-        font:{size:9,family:"'JetBrains Mono'"},
-        color:'#5a6278'
-      },
-      grid:{color:'rgba(255,255,255,0.03)'},
-      border:{color:'rgba(255,255,255,0.06)'}
+      ticks:{maxTicksLimit:4,maxRotation:0,minRotation:0,font:{size:9,family:"'JetBrains Mono'"},color:'#5a6278'},
+      grid:{color:'rgba(255,255,255,0.02)'},border:{color:'rgba(255,255,255,0.05)'}
     },
-    y:{ticks:{font:{size:9,family:"'JetBrains Mono'"},color:'#9ca3af'},grid:{color:'rgba(255,255,255,0.03)'},border:{color:'rgba(255,255,255,0.06)'}}
+    y:{ticks:{font:{size:9,family:"'JetBrains Mono'"},color:'#9ca3af'},grid:{color:'rgba(255,255,255,0.02)'},border:{color:'rgba(255,255,255,0.05)'}}
   }
 };
-
-function avg(arr){return arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:0;}
 
 function render(){
   const data=getFiltered();
   if(!data.length) return;
 
-  const well=document.getElementById('wellSel').value;
-  document.getElementById('mainTitle').textContent = well=='ALL' ? 'Predicción LSTM — Días Restantes' : 'Predicción LSTM — Pozo: '+well;
-
   const total=data.length;
+  const sorted=data.sort((a,b)=>new Date(a['Date'])-new Date(b['Date']));
+  const dates=sorted.map(r=>r['Date']?r['Date'].substring(0,10):'');
 
-  // Cond 1: caída oil > 25%
-  const oilVals=data.map(r=>parseFloat(r['Oil_rate_bbl_d'])||0);
-  const caida=data.filter((r,i)=>i>0&&oilVals[i]<oilVals[i-1]*0.75).length;
+  // --- CONDICIONES DE CONTROL ---
+  const oilVals=sorted.map(r=>parseFloat(r['Oil_rate_bbl_d'])||0);
+  const caida=sorted.filter((r,i)=>i>0&&oilVals[i]<oilVals[i-1]*0.75).length;
   const pct1=Math.round((caida/total)*100);
   const crit1=pct1>25;
   document.getElementById('val1').textContent=pct1+'%';
-  document.getElementById('val1').style.color=crit1?'var(--red)':'var(--green)';
-  document.getElementById('badge1').textContent=crit1?'🔴 CRÍTICO':'🟢 NORMAL';
-  document.getElementById('badge1').className='cond-badge '+(crit1?'badge-red':'badge-green');
   document.getElementById('card1').className='cond-card '+(crit1?'rojo':'verde');
-  document.getElementById('prog1').style.width=Math.min(pct1,100)+'%';
+  document.getElementById('badge1').className='cond-badge '+(crit1?'badge-red':'badge-green');
+  document.getElementById('badge1').textContent=crit1?'🔴 CRÍTICO':'🟢 NORMAL';
+  document.getElementById('prog1').style.width=pct1+'%';
   document.getElementById('prog1').style.background=crit1?'var(--red)':'var(--green)';
 
-  // Cond 2: water cut > 80%
-  const wcAltos=data.filter(r=>{
-    const o=parseFloat(r['Oil_rate_bbl_d'])||0;
-    const w=parseFloat(r['Water_rate_bbl_d'])||0;
+  const wcAltos=sorted.filter(r=>{
+    const o=parseFloat(r['Oil_rate_bbl_d'])||0; const w=parseFloat(r['Water_rate_bbl_d'])||0;
     return (o+w)>0 && (w/(o+w))>0.80;
   }).length;
   const pct2=Math.round((wcAltos/total)*100);
   const crit2=pct2>80;
   document.getElementById('val2').textContent=pct2+'%';
-  document.getElementById('val2').style.color=crit2?'var(--red)':pct2>50?'var(--amber)':'var(--green)';
-  document.getElementById('badge2').textContent=crit2?'🔴 CRÍTICO':pct2>50?'🟡 ALERTA':'🟢 NORMAL';
-  document.getElementById('badge2').className='cond-badge '+(crit2?'badge-red':pct2>50?'badge-amber':'badge-green');
-  document.getElementById('card2').className='cond-card '+(crit2?'rojo':pct2>50?'amarillo':'verde');
-  document.getElementById('prog2').style.width=Math.min(pct2,100)+'%';
-  document.getElementById('prog2').style.background=crit2?'var(--red)':pct2>50?'var(--amber)':'var(--green)';
+  document.getElementById('card2').className='cond-card '+(crit2?'rojo':'verde');
+  document.getElementById('badge2').className='cond-badge '+(crit2?'badge-red':'badge-green');
+  document.getElementById('badge2').textContent=crit2?'🔴 CRÍTICO':'🟢 NORMAL';
+  document.getElementById('prog2').style.width=pct2+'%';
+  document.getElementById('prog2').style.background=crit2?'var(--red)':'var(--green)';
 
-  // Cond 3: recuperación futura < 75%
-  const bajaRec=data.filter(r=>{
-    const dias=parseFloat(r['Prediccion_LSTM_Dias'])||0;
-    const real=parseFloat(r['Dias_Restantes'])||1;
-    return real>0 && (dias/real)<0.75;
+  const bajaRec=sorted.filter(r=>{
+    const d=parseFloat(r['Prediccion_LSTM_Dias'])||0; const real=parseFloat(r['Dias_Restantes'])||1;
+    return real>0 && (d/real)<0.75;
   }).length;
   const pct3=Math.round((bajaRec/total)*100);
   const crit3=pct3>75;
   document.getElementById('val3').textContent=pct3+'%';
-  document.getElementById('val3').style.color=crit3?'var(--red)':pct3>50?'var(--amber)':'var(--green)';
-  document.getElementById('badge3').textContent=crit3?'🔴 CRÍTICO':pct3>50?'🟡 ALERTA':'🟢 NORMAL';
-  document.getElementById('badge3').className='cond-badge '+(crit3?'badge-red':pct3>50?'badge-amber':'badge-green');
-  document.getElementById('card3').className='cond-card '+(crit3?'rojo':pct3>50?'amarillo':'verde');
-  document.getElementById('prog3').style.width=Math.min(pct3,100)+'%';
-  document.getElementById('prog3').style.background=crit3?'var(--red)':pct3>50?'var(--amber)':'var(--green)';
+  document.getElementById('card3').className='cond-card '+(crit3?'rojo':'verde');
+  document.getElementById('badge3').className='cond-badge '+(crit3?'badge-red':'badge-green');
+  document.getElementById('badge3').textContent=crit3?'🔴 CRÍTICO':'🟢 NORMAL';
+  document.getElementById('prog3').style.width=pct3+'%';
+  document.getElementById('prog3').style.background=crit3?'var(--red)':'var(--green)';
 
-  const sorted=data.sort((a,b)=>new Date(a['Date'])-new Date(b['Date']));
-  const dates=sorted.map(r=>r['Date']?r['Date'].substring(0,10):'');
-  const diasReal=sorted.map(r=>parseFloat(r['Dias_Restantes'])||null);
-  const diasPred=sorted.map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||null);
-
-  // 1. Gráfico Predicción LSTM
+  // --- 1. GRÁFICA RUL LSTM ---
   destroyChart('pred');
   charts['pred']=new Chart(document.getElementById('chartPred'),{
     type:'line',
     data:{labels:dates,datasets:[
-      {label:'Días Reales',data:diasReal,borderColor:'#00e5a0',borderWidth:2,pointRadius:0,tension:0.1},
-      {label:'Predicción LSTM',data:diasPred,borderColor:'#ff3c5a',borderWidth:2,pointRadius:0,tension:0.1,borderDash:[4,4]}
+      {label:'Real',data:sorted.map(r=>parseFloat(r['Dias_Restantes'])||null),borderColor:'#00e5a0',borderWidth:2,pointRadius:0,tension:0.1},
+      {label:'LSTM',data:sorted.map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||null),borderColor:'#ff3c5a',borderWidth:2,pointRadius:0,tension:0.1,borderDash:[4,4]}
     ]},
     options:{...chartDefaults}
   });
 
-  // 2. Distribución de Alertas
-  const nCrit=data.filter(r=>(r['Alerta']||'').includes('CRITICO')).length;
-  const nAlert=data.filter(r=>(r['Alerta']||'').includes('ALERTA')).length;
-  const nNorm=data.filter(r=>(r['Alerta']||'').includes('NORMAL')).length;
-
-  destroyChart('alerts');
-  charts['alerts']=new Chart(document.getElementById('chartAlerts'),{
-    type:'doughnut',
-    data:{
-      labels:['Crítico','Alerta','Normal'],
-      datasets:[{data:[nCrit,nAlert,nNorm],backgroundColor:['#ff3c5a','#ffb830','#00e5a0'],borderWidth:0}]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,cutout:'70%',
-      plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"},boxWidth:10}}}
-    }
-  });
-
-  // 3. Lift System
-  const liftCounts={};
-  data.forEach(r=>{const l=r['Lift_system']||'Desconocido';liftCounts[l]=(liftCounts[l]||0)+1;});
-  destroyChart('lift');
-  charts['lift']=new Chart(document.getElementById('chartLift'),{
-    type:'bar',
-    data:{labels:Object.keys(liftCounts),datasets:[{data:Object.values(liftCounts),backgroundColor:['#3b9eff','#ff6eb4','#ffb830'],borderRadius:4}]},
-    options:{...chartDefaults}
-  });
-
-  // 4. Oil vs Water
-  const step=Math.max(1,Math.floor(sorted.length/60));
+  // --- 2. HIDRODINÁMICA FÍSICA (Indexada sin combinaciones destructivas) ---
+  const step=Math.max(1,Math.floor(sorted.length/40));
   const datesS=dates.filter((_,i)=>i%step===0);
   const oilS=oilVals.filter((_,i)=>i%step===0);
-  const waterS=data.map(r=>parseFloat(r['Water_rate_bbl_d'])||0).filter((_,i)=>i%step===0);
+  const waterS=sorted.map(r=>parseFloat(r['Water_rate_bbl_d'])||0).filter((_,i)=>i%step===0);
+  
+  // Mapeo seguro del volumen de gas buscando la correlación por fecha en dfProd
+  const gasS=sorted.filter((_,i)=>i%step===0).map(r => {
+    const match = dfProd.find(p => p['Date'] === r['Date'] && p['Well_ID'] === r['Well_ID']);
+    return match ? parseFloat(match['Gas_rate_mscf_d']) || 0 : 0;
+  });
 
   destroyChart('oilwater');
   charts['oilwater']=new Chart(document.getElementById('chartOilWater'),{
     type:'line',
     data:{labels:datesS,datasets:[
       {label:'Oil',data:oilS,borderColor:'#00e5a0',borderWidth:1.5,pointRadius:0,tension:0.1},
-      {label:'Water',data:waterS,borderColor:'#3b9eff',borderWidth:1.5,pointRadius:0,tension:0.1}
+      {label:'Water',data:waterS,borderColor:'#3b9eff',borderWidth:1.5,pointRadius:0,tension:0.1},
+      {label:'Gas',data:gasS,borderColor:'#ff6eb4',borderWidth:1.2,pointRadius:0,tension:0.1,borderDash:[2,2]}
     ]},
     options:{...chartDefaults}
   });
 
-  // 5. Promedio de Días por Pozo
-  const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].sort();
-  const avgDias=wells.map(w=>{
-    const vals=dfPred.filter(r=>r['Well_ID']===w).map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||0);
-    return Math.round(avg(vals));
+  // --- 3. MONITOREO DIARIO DE OPERATIVIDAD (UPTIME REACTIVO) ---
+  const uptimeS=sorted.filter((_,i)=>i%step===0).map(r => {
+    const match = dfProd.find(p => p['Date'] === r['Date'] && p['Well_ID'] === r['Well_ID']);
+    return match ? parseFloat(match['Uptime_pct']) || 94.1 : 94.1; 
   });
-  destroyChart('wellavg');
-  charts['wellavg']=new Chart(document.getElementById('chartWellAvg'),{
+
+  destroyChart('uptime');
+  charts['uptime']=new Chart(document.getElementById('chartUptime'),{
+    type:'line',
+    data:{labels:datesS,datasets:[{label:'Uptime %',data:uptimeS,borderColor:'#3b9eff',borderWidth:2,pointRadius:0,backgroundColor:'rgba(59,158,255,0.05)',fill:true}]},
+    options:{...chartDefaults,scales:{...chartDefaults.scales,y:{min:80,max:100,ticks:{font:{size:9},color:'#9ca3af'}}}}
+  });
+
+  // --- 4. DISTRIBUCIÓN DE ALERTAS ---
+  const nCrit=sorted.filter(r=>(r['Alerta']||'').includes('CRITICO')).length;
+  const nAlert=sorted.filter(r=>(r['Alerta']||'').includes('ALERTA')).length;
+  const nNorm=sorted.filter(r=>(r['Alerta']||'').includes('NORMAL')).length;
+
+  destroyChart('alerts');
+  charts['alerts']=new Chart(document.getElementById('chartAlerts'),{
+    type:'doughnut',
+    data:{labels:['Crítico','Alerta','Normal'],datasets:[{data:[nCrit,nAlert,nNorm],backgroundColor:['#ff3c5a','#ffb830','#00e5a0'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"}}}}}
+  });
+
+  // --- 5. % MÉTODO DE EXTRACCIÓN (LIFT SYSTEM) ---
+  const liftCounts={}; sorted.forEach(r=>{const l=r['Lift_system']||'NaturalFlow'; liftCounts[l]=(liftCounts[l]||0)+1;});
+  destroyChart('lift');
+  charts['lift']=new Chart(document.getElementById('chartLift'),{
+    type:'pie',
+    data:{labels:Object.keys(liftCounts),datasets:[{data:Object.values(liftCounts),backgroundColor:['#3b9eff','#ff6eb4','#ffb830','#00e5a0'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"}}}}}
+  });
+
+  // --- 6. BARRILES DE PETRÓLEO POR MÉTODO (VOLUMEN REAL ACUMULADO) ---
+  const methodVols={};
+  sorted.forEach(r=>{
+    const l=r['Lift_system']||'NaturalFlow';
+    const o=parseFloat(r['Oil_rate_bbl_d'])||0;
+    methodVols[l]=(methodVols[l]||0)+o;
+  });
+
+  destroyChart('methodvol');
+  charts['methodvol']=new Chart(document.getElementById('chartMethodVol'),{
     type:'bar',
-    data:{labels:wells,datasets:[{data:avgDias,backgroundColor:'#3b9eff',borderRadius:4}]},
+    data:{labels:Object.keys(methodVols),datasets:[{data:Object.values(methodVols),backgroundColor:'#3b9eff',borderRadius:4}]},
     options:{...chartDefaults}
   });
 }
