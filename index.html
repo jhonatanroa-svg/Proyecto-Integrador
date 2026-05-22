@@ -30,7 +30,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
 
-/* HEADER */
+/* HEADER LAYOUT ORIGINAL */
 .header{
   padding:1.5rem 2rem 1rem;
   border-bottom:1px solid var(--border);
@@ -44,7 +44,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .status-pill.ok{border-color:var(--green);color:var(--green);}
 .status-pill.err{border-color:var(--red);color:var(--red);}
 
-/* FILTERS */
+/* FILTERS LAYOUT ORIGINAL */
 .filters{
   display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
   padding:1rem 2rem;background:var(--bg2);border-bottom:1px solid var(--border);
@@ -85,7 +85,7 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
 .progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:2px;transition:width .6s ease;}
 
-/* CHARTS GRID */
+/* ESTRUCTURA ORIGINAL DE PANALES */
 .charts-top{display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem;}
 .charts-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;}
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
@@ -129,7 +129,7 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
   <div class="header">
     <div>
       <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
-      <div class="header-sub">Modelo LSTM · Predicción de vida útil por pozo · Ejes de Tiempo Solucionados</div>
+      <div class="header-sub">Modelo LSTM · Predicción de vida útil por pozo · Actualización automática</div>
     </div>
     <div id="statusPill" class="status-pill">Cargando...</div>
   </div>
@@ -220,8 +220,8 @@ select:focus,input:focus{outline:none;border-color:var(--green);}
         <div class="chart-header">
           <span class="chart-title">Oil Rate vs Water Rate</span>
           <div class="legend">
-            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Oil (bbl/d)</div>
-            <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Water (bbl/d)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Oil</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Water</div>
           </div>
         </div>
         <div class="chart-wrap h180"><canvas id="chartOilWater"></canvas></div>
@@ -241,7 +241,7 @@ const URL_PRED = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4FiA0jBinWUn
 
 let dfProd = [], dfPred = [], charts = {};
 
-// Extrae de forma limpia 'AAAA-MM-DD' cortando marcas horarias largas
+// Normaliza las fechas removiendo marcas de tiempo para que JavaScript las entienda
 function cleanDateStr(str) {
   if (!str) return '';
   return str.trim().split(' ')[0].split('T')[0];
@@ -321,7 +321,7 @@ function getFiltered(){
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// NUEVA CONFIGURACIÓN INTEGRAL PARA ELIMINAR LOS MASIVOS SÍMBOLOS ####
+// Configuración global reutilizable para los ejes de tiempo estructurados sin desbordes
 const timeChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -329,7 +329,7 @@ const timeChartOptions = {
   plugins: { legend: { display: false } },
   scales: {
     x: {
-      type: 'time', // Activa el motor de tiempo nativo de Chart.js
+      type: 'time', // Habilita el análisis cronológico real
       time: {
         unit: 'month',
         displayFormats: { month: 'MMM yyyy', day: 'dd MMM' }
@@ -337,7 +337,7 @@ const timeChartOptions = {
       ticks: {
         font: { size: 9, family: "'JetBrains Mono'" },
         color: '#5a6278',
-        maxTicksLimit: 6 // Evita la sobrepoblación del eje de forma dinámica
+        maxTicksLimit: 5 // Controla dinámicamente el espacio para evitar los "####"
       },
       grid: { color: 'rgba(255,255,255,0.03)' },
       border: { color: 'rgba(255,255,255,0.06)' }
@@ -363,7 +363,7 @@ function render(){
 
   const total=data.length;
 
-  // KPIs de Condiciones
+  // Renderizado dinámico de KPIs y progreso de las Tarjetas
   const oilVals=data.map(r=>parseFloat(r['Oil_rate_bbl_d'])||0);
   const caida=data.filter((r,i)=>i>0&&oilVals[i]<oilVals[i-1]*0.75).length;
   const pct1=Math.round((caida/total)*100)||0;
@@ -400,10 +400,10 @@ function render(){
   document.getElementById('card3').className='cond-card '+(crit3?'rojo':pct3>50?'amarillo':'verde');
   document.getElementById('prog3').style.width=Math.min(pct3,100)+'%';
 
-  // Ordenamiento cronológico estricto
+  // Ordenamiento cronológico estricto para las líneas temporales
   const sorted=data.sort((a,b)=>new Date(cleanDateStr(a['Date']))-new Date(cleanDateStr(b['Date'])));
   
-  // Estructuramos los datos en objetos {x, y} requeridos por la escala de tiempo
+  // SOLUCIÓN CLAVE: Transformación de arreglos planos en objetos {x: Date, y: Number} requeridos por el adaptador de tiempo
   const pointsReal = sorted.map(r => ({ x: new Date(cleanDateStr(r['Date'])), y: parseFloat(r['Dias_Restantes'])||null }));
   const pointsPred = sorted.map(r => ({ x: new Date(cleanDateStr(r['Date'])), y: parseFloat(r['Prediccion_LSTM_Dias'])||null }));
   const pointsUmbral = sorted.map(r => ({ x: new Date(cleanDateStr(r['Date'])), y: 90 }));
@@ -440,7 +440,7 @@ function render(){
     }
   });
 
-  // 3. LIFT SYSTEM (Barras fijas)
+  // 3. LIFT SYSTEM (Gráfico de barras estático)
   const liftCounts={};
   data.forEach(r=>{const l=r['Lift_system']||'Desconocido';liftCounts[l]=(liftCounts[l]||0)+1;});
   destroyChart('lift');
@@ -456,7 +456,7 @@ function render(){
     }
   });
 
-  // 4. OIL VS WATER (Escala de tiempo corregida)
+  // 4. OIL VS WATER (Línea de tiempo nativa corregida con objetos estructurados)
   const pointsOil = sorted.map(r => ({ x: new Date(cleanDateStr(r['Date'])), y: parseFloat(r['Oil_rate_bbl_d'])||0 }));
   const pointsWater = sorted.map(r => ({ x: new Date(cleanDateStr(r['Date'])), y: parseFloat(r['Water_rate_bbl_d'])||0 }));
 
@@ -479,7 +479,7 @@ function render(){
     }
   });
 
-  // 5. PROMEDIO DÍAS POR POZO
+  // 5. PROMEDIO DÍAS POR POZO (Gráfico de barras estático)
   const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].sort();
   const avgDias=wells.map(w=>{
     const vals=dfPred.filter(r=>r['Well_ID']===w).map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||0);
