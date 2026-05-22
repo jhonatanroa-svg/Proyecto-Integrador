@@ -3,509 +3,477 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Dashboard de Operaciones e Inteligencia Predictiva</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-
+<title>Tablero de Seguimiento Preventivo (Matriz 3x3)</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-
 <style>
 :root {
-  --bg:        #06090f;
-  --bg2:       #0c101b;
-  --bg3:       #121727;
-  --border:    rgba(255, 255, 255, 0.05);
+  --bg:        #080b12;
+  --bg2:       #0e1220;
+  --bg3:       #141828;
+  --border:    rgba(255,255,255,0.06);
   --green:     #00e5a0;
   --blue:      #3b9eff;
   --pink:      #ff6eb4;
   --amber:     #ffb830;
   --red:       #ff3c5a;
-  --text:      #e2e8f0;
-  --muted:     #4b5563;
-  --dim:       #94a3b8;
+  --text:      #e8eaf0;
+  --muted:     #5a6278;
+  --dim:       #9ca3af;
   --font:      'Syne', sans-serif;
   --mono:      'JetBrains Mono', monospace;
 }
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--font); overflow-x: hidden; padding-bottom: 2rem; }
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
 
 /* HEADER */
-.header-dashboard {
-  padding: 1.5rem 2rem;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.header{
+  padding:1.5rem 2rem 1rem;
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
 }
-.title-area h1 { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-.title-area h1 span { color: var(--green); }
-.title-area p { font-size: 11px; color: var(--dim); font-family: var(--mono); margin-top: 2px; }
+.header-title{font-size:20px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;}
+.header-title span{color:var(--green);}
+.header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
+.status-pill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.status-pill.ok{border-color:var(--green);color:var(--green);}
+.status-pill.err{border-color:var(--red);color:var(--red);}
 
-/* FILTROS ACOPLADOS (Fila Superior) */
-.filter-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  padding: 1rem 2rem;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
+/* FILTERS */
+.filters{
+  display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
+  padding:1rem 2rem;background:var(--bg2);border-bottom:1px solid var(--border);
 }
-.filter-box { display: flex; flex-direction: column; gap: 4px; }
-.filter-box label { font-size: 10px; font-family: var(--mono); color: var(--dim); text-transform: uppercase; }
-select, input[type="date"] {
-  background: var(--bg3); color: var(--text); border: 1px solid var(--border);
-  border-radius: 6px; padding: 10px; font-size: 12px; font-family: var(--mono); outline: none; width: 100%;
+.filter-group{display:flex;align-items:center;gap:8px;}
+.filter-group label{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;}
+select,input[type=date]{
+  background:var(--bg3);color:var(--text);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono);cursor:pointer;
 }
-select:focus, input:focus { border-color: var(--green); }
+select{padding-right:28px;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;}
+select:focus,input:focus{outline:none;border-color:var(--green);}
 
-/* CUADRÍCULA GENERAL MATRIZ 3x3 EXIGIDA */
-.dashboard-grid {
+/* MAIN */
+.main{padding:1.5rem 2rem;}
+
+/* CONDICION CARDS (FILA 1 DE LA MATRIZ) */
+.conditions-grid{
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr); /* Forzado simétrico estricto */
   gap: 1.25rem;
-  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
 }
-
-/* FILA 1: TARJETAS DE CONDICIONES */
-.cond-card {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;
-  position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+.cond-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:1.25rem;position:relative;overflow:hidden;
 }
-.cond-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-.cond-card.verde::before { background: var(--green); }
-.cond-card.amarillo::before { background: var(--amber); }
-.cond-card.rojo::before { background: var(--red); }
+.cond-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;}
+.cond-card.verde::after{background:var(--green);}
+.cond-card.rojo::after{background:var(--red);}
+.cond-card.amarillo::after{background:var(--amber);}
+.cond-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.cond-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.cond-badge{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:10px;font-weight:500;}
+.badge-green{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25);}
+.badge-red{background:rgba(255,60,90,.12);color:var(--red);border:1px solid rgba(255,60,90,.25);}
+.badge-amber{background:rgba(255,184,48,.12);color:var(--amber);border:1px solid rgba(255,184,48,.25);}
+.cond-val{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
+.cond-desc{font-size:11px;color:var(--dim);font-family:var(--mono);}
+.cond-limit{font-size:10px;color:var(--muted);margin-top:6px;font-family:var(--mono);}
+.progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .6s ease;}
 
-.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-.card-label { font-size: 10px; font-family: var(--mono); color: var(--dim); text-transform: uppercase; }
-.card-status { font-size: 9px; font-family: var(--mono); padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-.status-v { background: rgba(0, 229, 160, 0.1); color: var(--green); }
-.status-a { background: rgba(255, 184, 48, 0.1); color: var(--amber); }
-.status-r { background: rgba(255, 60, 90, 0.1); color: var(--red); }
-
-.card-value { font-size: 32px; font-weight: 700; margin-bottom: 2px; }
-.card-sub { font-size: 11px; color: var(--dim); font-family: var(--mono); }
-
-/* CONTENEDORES DE GRÁFICOS (HOMOGÉNEOS Y LIMPIOS) */
-.chart-card {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
-  padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 310px;
+/* DASHBOARD GRID REESTRUCTURADO EN FILAS TOTALMENTE HOMOGÉNEAS DE 3 COLUMNAS */
+.matrix-row-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columnas perfectas por fila */
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
 }
-.chart-title { font-size: 11px; font-family: var(--mono); color: var(--text); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; border-left: 2px solid var(--blue); padding-left: 6px; }
-.chart-container-relative { position: relative; width: 100%; height: 230px; }
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between;}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.chart-title{font-size:11px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
+.legend{display:flex;gap:12px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono);}
+.leg-dot{width:8px;height:8px;border-radius:2px;}
+.chart-wrap{position:relative;width:100%;height: 230px;}
 
-/* PANTALLA DE CARGA */
-.loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
-.spinner { width: 45px; height: 45px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:1rem;}
+.loading-screen h2{font-size:18px;font-weight:700;color:var(--text);}
+.loading-screen p{font-size:12px;color:var(--muted);font-family:var(--mono);}
+.loader{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-@media (max-width: 1024px) {
-  .dashboard-grid, .filter-row { grid-template-columns: repeat(2, 1fr); }
+@media(max-width:1100px){
+  .matrix-row-grid, .conditions-grid {grid-template-columns: repeat(2, 1fr);}
 }
-@media (max-width: 680px) {
-  .dashboard-grid, .filter-row { grid-template-columns: 1fr; }
+@media(max-width:700px){
+  .matrix-row-grid, .conditions-grid {grid-template-columns: 1fr;}
 }
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loader">
-  <div class="spinner"></div>
-  <p style="font-family: var(--mono); font-size: 13px;">Procesando Datos de Producción Física...</p>
+<div class="loading-screen" id="loadingScreen">
+  <div class="loader"></div>
+  <h2>Tablero de Seguimiento Preventivo</h2>
+  <p id="loadingMsg">Conectando con Google Sheets...</p>
 </div>
 
-<div id="dashboardApp" style="display: none;">
+<div id="app" style="display:none;">
 
-  <div class="header-dashboard">
-    <div class="title-area">
-      <h1>Monitoreo Analítico e <span>Inteligencia Operativa</span></h1>
-      <p>Control Avanzado y Mitigación Preventiva de Fallas Críticas de Extracción</p>
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
+      <div class="header-sub">Modelo LSTM · Predicción de vida útil por pozo · Actualización automática</div>
+    </div>
+    <div id="statusPill" class="status-pill">Cargando...</div>
+  </div>
+
+  <div class="filters" id="filtersBar">
+    <div class="filter-group">
+      <label>Pozo</label>
+      <select id="wellSel"><option value="ALL">Todos los pozos</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Desde</label>
+      <input type="date" id="dateFrom"/>
+    </div>
+    <div class="filter-group">
+      <label>Hasta</label>
+      <input type="date" id="dateTo"/>
+    </div>
+    <div class="filter-group">
+      <label>Alerta</label>
+      <select id="alertSel">
+        <option value="ALL">Todas</option>
+        <option value="CRITICO">🔴 Crítico</option>
+        <option value="ALERTA">🟡 Alerta</option>
+        <option value="NORMAL">🟢 Normal</option>
+      </select>
     </div>
   </div>
 
-  <div class="filter-row">
-    <div class="filter-box">
-      <label>N° Pozo Coincidente</label>
-      <select id="wellFilter"><option value="ALL">Todos los Pozos Activos</option></select>
-    </div>
-    <div class="filter-box">
-      <label>Fecha Límite Inicio</label>
-      <input type="date" id="dateStart"/>
-    </div>
-    <div class="filter-box">
-      <label>Fecha Límite Fin</label>
-      <input type="date" id="dateEnd"/>
-    </div>
-  </div>
+  <div class="main">
 
-  <div class="dashboard-grid">
-
-    <div class="cond-card" id="c1">
-      <div class="card-top"><span class="card-label">Condición 1</span><span class="card-status" id="b1">—</span></div>
-      <div class="card-value" id="v1">—</div>
-      <div class="card-sub">Declinación Cruda de Producción > 25%</div>
-    </div>
-
-    <div class="cond-card" id="c2">
-      <div class="card-top"><span class="card-label">Condición 2</span><span class="card-status" id="b2">—</span></div>
-      <div class="card-value" id="v2">—</div>
-      <div class="card-sub">Saturación de Agua (Water Cut) > 80%</div>
-    </div>
-
-    <div class="cond-card" id="c3">
-      <div class="card-top"><span class="card-label">Condición 3</span><span class="card-status" id="b3">—</span></div>
-      <div class="card-value" id="v3">—</div>
-      <div class="card-sub">Recuperación Remanente LSTM < 75%</div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-title">Gráfico RUL con Modelo Predictivo LSTM</div>
-      <div class="chart-container-relative"><canvas id="canvasLSTM"></canvas></div>
+    <div class="conditions-grid">
+      <div class="cond-card" id="card1">
+        <div class="cond-header">
+          <span class="cond-label">Condición 1 · Caída de Petróleo</span>
+          <span class="cond-badge" id="badge1">—</span>
+        </div>
+        <div class="cond-val" id="val1">—</div>
+        <div class="cond-desc">Pozos con caída de Oil Rate &gt; 25%</div>
+        <div class="cond-limit" id="limit1">Límite crítico: &gt; 25% → ROJO</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog1" style="width:0%;background:var(--green);"></div></div>
+      </div>
+      <div class="cond-card" id="card2">
+        <div class="cond-header">
+          <span class="cond-label">Condición 2 · Water Cut</span>
+          <span class="cond-badge" id="badge2">—</span>
+        </div>
+        <div class="cond-val" id="val2">—</div>
+        <div class="cond-desc">Pozos con Water Cut &gt; 80%</div>
+        <div class="cond-limit" id="limit2">Límite crítico: &gt; 80% → ROJO</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;background:var(--green);"></div></div>
+      </div>
+      <div class="cond-card" id="card3">
+        <div class="cond-header">
+          <span class="cond-label">Condición 3 · Recuperación Futura</span>
+          <span class="cond-badge" id="badge3">—</span>
+        </div>
+        <div class="cond-val" id="val3">—</div>
+        <div class="cond-desc">Pozos con recuperación futura &lt; 75%</div>
+        <div class="cond-limit" id="limit3">Límite crítico: &gt; 75% afectados → ROJO</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog3" style="width:0%;background:var(--green);"></div></div>
+      </div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-title">Gráfica Comparativa Hidrodinámica Física</div>
-      <div class="chart-container-relative"><canvas id="canvasHydro"></canvas></div>
+    <div class="matrix-row-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title" id="mainTitle">Predicción LSTM — Días Restantes</span>
+          <div class="legend">
+            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Real</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ff3c5a;"></span>LSTM</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartPred"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Distribución de Alertas</span></div>
+        <div class="chart-wrap"><canvas id="chartAlerts"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Participación Lift System</span></div>
+        <div class="chart-wrap"><canvas id="chartLift"></canvas></div>
+      </div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-title">Monitoreo Diario de Operatividad (Uptime)</div>
-      <div class="chart-container-relative"><canvas id="canvasOperatividad"></canvas></div>
-    </div>
+    <div class="matrix-row-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Oil Rate vs Water Rate</span>
+          <div class="legend">
+            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Oil</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Water</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartOilWater"></canvas></div>
+      </div>
 
-    <div class="chart-card">
-      <div class="chart-title">N° Alertas por Nivel Operativo</div>
-      <div class="chart-container-relative"><canvas id="canvasAlertas"></canvas></div>
-    </div>
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Promedio Días Restantes por Pozo</span></div>
+        <div class="chart-wrap"><canvas id="chartWellAvg"></canvas></div>
+      </div>
 
-    <div class="chart-card">
-      <div class="chart-title">% Método de Extracción (Lift System)</div>
-      <div class="chart-container-relative"><canvas id="canvasLiftPie"></canvas></div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-title">Barriles de Petróleo por Método de Extracción</div>
-      <div class="chart-container-relative"><canvas id="canvasVolumenBar"></canvas></div>
+      <div class="chart-card" style="justify-content: center; align-items: center; border-style: dashed; background: rgba(255,255,255,0.01);">
+        <span style="font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase;">Métrica de Eficiencia Reservada</span>
+      </div>
     </div>
 
   </div>
 </div>
 
 <script>
-// Direcciones de Datos Crudos Sincronizados
-const SRC_PROD = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_rlq6VhoU4fgWduJN1tTabZXLORDQpjYOxahQIBNiFHC6KQ2Kqi8hG4NvIIlRSnfEzr-yKm9K7EAa/pub?gid=1809707117&single=true&output=csv";
-const SRC_PRED = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4FiA0jBinWUnvKoGeb-za6-oKXxQKVUd-u6ao4JCF8S4LZrdzIdUUXvt-oP3ex2s5PI87FJZZS7yd/pub?gid=2013598279&single=true&output=csv";
+const URL_PROD = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_rlq6VhoU4fgWduJN1tTabZXLORDQpjYOxahQIBNiFHC6KQ2Kqi8hG4NvIIlRSnfEzr-yKm9K7EAa/pub?gid=1809707117&single=true&output=csv";
+const URL_PRED = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4FiA0jBinWUnvKoGeb-za6-oKXxQKVUd-u6ao4JCF8S4LZrdzIdUUXvt-oP3ex2s5PI87FJZZS7yd/pub?gid=2013598279&single=true&output=csv";
 
-let globalProd = [], globalPred = [], activeCharts = {};
+let dfProd = [], dfPred = [], charts = {};
 
-function cleanStringDate(str) {
-  if(!str) return "";
-  return str.trim().split(" ")[0].split("T")[0];
-}
-
-function processCSVText(text) {
-  const lines = text.trim().split("\n");
-  const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, '').trim());
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
   return lines.slice(1).map(line => {
-    const segments = []; let insideQuote = false, current = "";
-    for(let char of line) {
-      if(char === '"') insideQuote = !insideQuote;
-      else if(char === ',' && !insideQuote) { segments.push(current.trim()); current = ""; }
-      else current += char;
-    }
-    segments.push(current.trim());
-    const rowObj = {};
-    headers.forEach((h, index) => {
-      rowObj[h] = (segments[index] || "").replace(/^"|"$/g, '').trim();
-    });
-    return rowObj;
+    const cols = []; let cur='', inQ=false;
+    for(let c of line){ if(c==='"') inQ=!inQ; else if(c===','&&!inQ){cols.push(cur.trim());cur='';} else cur+=c; }
+    cols.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
   });
 }
 
-async function startInitialization() {
-  try {
-    const [resProd, resPred] = await Promise.all([fetch(SRC_PROD), fetch(SRC_PRED)]);
-    globalProd = processCSVText(await resProd.text());
-    globalPred = processCSVText(await resPred.text());
+function setStatus(msg,state){
+  const el=document.getElementById('statusPill');
+  el.textContent=msg; el.className='status-pill '+(state||'');
+}
+function setLoading(msg){document.getElementById('loadingMsg').textContent=msg;}
 
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("dashboardApp").style.display = "block";
+async function loadData(){
+  try{
+    setLoading('Cargando datos de producción...');
+    const r1 = await fetch(URL_PROD);
+    if(!r1.ok) throw new Error('Error producción: '+r1.status);
+    dfProd = parseCSV(await r1.text());
 
-    generateFilters();
-    executeRenderCore();
-  } catch(error) {
-    console.error("Error crítico en parseo de datos estructurados", error);
+    setLoading('Cargando predicciones LSTM...');
+    const r2 = await fetch(URL_PRED);
+    if(!r2.ok) throw new Error('Error predicciones: '+r2.status);
+    dfPred = parseCSV(await r2.text());
+
+    setStatus('● '+dfPred.length+' predicciones cargadas','ok');
+    buildFilters();
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    render();
+  } catch(e){
+    setStatus('Error: '+e.message,'err');
+    document.getElementById('loadingMsg').textContent='Error: '+e.message;
   }
 }
 
-function generateFilters() {
-  const uniquelyWells = [...new Set(globalPred.map(r => r['Well_ID']))].filter(Boolean).sort();
-  const select = document.getElementById("wellFilter");
-  uniquelyWells.forEach(w => {
-    const opt = document.createElement("option"); opt.value = w; opt.textContent = w; select.appendChild(opt);
-  });
+function buildFilters(){
+  const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].sort();
+  const sel=document.getElementById('wellSel');
+  wells.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent=w;sel.appendChild(o);});
 
-  const timelineDates = globalPred.map(r => cleanStringDate(r['Date'])).filter(Boolean).sort();
-  if(timelineDates.length) {
-    document.getElementById("dateStart").value = timelineDates[0];
-    document.getElementById("dateEnd").value = timelineDates[timelineDates.length - 1];
+  const dates=dfPred.map(r=>r['Date']).filter(Boolean).sort();
+  if(dates.length){
+    document.getElementById('dateFrom').value=dates[0].substring(0,10);
+    document.getElementById('dateTo').value=dates[dates.length-1].substring(0,10);
   }
 
-  ["wellFilter", "dateStart", "dateEnd"].forEach(id => {
-    document.getElementById(id).addEventListener("change", executeRenderCore);
-  });
+  ['wellSel','dateFrom','dateTo','alertSel'].forEach(id=>
+    document.getElementById(id).addEventListener('change',render)
+  );
 }
 
-function fetchFilteredSubset() {
-  const targetWell = document.getElementById("wellFilter").value;
-  const startLimit = document.getElementById("dateStart").value;
-  const endLimit = document.getElementById("dateEnd").value;
+function getFiltered(){
+  const well=document.getElementById('wellSel').value;
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  const alert=document.getElementById('alertSel').value;
 
-  return globalPred.filter(row => {
-    const currentDay = cleanStringDate(row['Date']);
-    if(targetWell !== "ALL" && row['Well_ID'] !== targetWell) return false;
-    if(startLimit && currentDay && currentDay < startLimit) return false;
-    if(endLimit && currentDay && currentDay > endLimit) return false;
+  return dfPred.filter(r=>{
+    if(well!=='ALL' && r['Well_ID']!==well) return false;
+    if(from && r['Date'] && r['Date'].substring(0,10)<from) return false;
+    if(to && r['Date'] && r['Date'].substring(0,10)>to) return false;
+    if(alert!=='ALL' && !(r['Alerta']||'').includes(alert)) return false;
     return true;
   });
 }
 
-function clearPreviousCanvasInstance(id) {
-  if(activeCharts[id]) { activeCharts[id].destroy(); delete activeCharts[id]; }
-}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// ARQUITECTURA DEFENSIVA CONTRA EL DESBORDE DEL EJE X (ELIMINACIÓN DE '###')
-function buildDefensiveXAxis(labelsArray) {
-  return {
-    ticks: {
-      font: { size: 9, family: "'JetBrains Mono'" },
-      color: "#5a6278",
-      maxRotation: 0,
-      minRotation: 0,
-      autoSkip: true,
-      maxTicksLimit: 4 // Forzado de separación equidistante para que no colisionen caracteres largos
+/* CONFIGURACIÓN ANTICOLISIÓN DE TEXTOS EXIGIDA PARA FECHAS */
+const chartDefaults={
+  responsive:true,maintainAspectRatio:false,
+  interaction:{mode:'index',intersect:false},
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{
+      ticks:{
+        maxTicksLimit:4, // Forzado matemático de espacio amplio para que no salgan símbolos rotos ni colisiones
+        maxRotation:0,
+        minRotation:0,
+        font:{size:9,family:"'JetBrains Mono'"},
+        color:'#5a6278'
+      },
+      grid:{color:'rgba(255,255,255,0.03)'},
+      border:{color:'rgba(255,255,255,0.06)'}
     },
-    grid: { color: "rgba(255, 255, 255, 0.02)" }
-  };
-}
-
-const baseCommonYAxis = {
-  ticks: { font: { size: 9, family: "'JetBrains Mono'" }, color: "#94a3b8" },
-  grid: { color: "rgba(255, 255, 255, 0.03)" }
+    y:{ticks:{font:{size:9,family:"'JetBrains Mono'"},color:'#9ca3af'},grid:{color:'rgba(255,255,255,0.03)'},border:{color:'rgba(255,255,255,0.06)'}}
+  }
 };
 
-function executeRenderCore() {
-  const dataset = fetchFilteredSubset();
-  if(!dataset.length) return;
+function avg(arr){return arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:0;}
 
-  // Ordenamiento cronológico explícito
-  const timelineSorted = dataset.sort((a,b) => new Date(cleanStringDate(a['Date'])) - new Date(cleanStringDate(b['Date'])));
-  const xLabels = timelineSorted.map(r => cleanStringDate(r['Date']));
+function render(){
+  const data=getFiltered();
+  if(!data.length) return;
 
-  // --- RENDERING BLOQUE DE CONDICIONES (FILA 1) ---
-  const rawOils = timelineSorted.map(r => parseFloat(r['Oil_rate_bbl_d']) || 0);
-  const dropCounter = timelineSorted.filter((r, idx) => idx > 0 && rawOils[idx] < rawOils[idx-1] * 0.75).length;
-  const pctCond1 = Math.round((dropCounter / timelineSorted.length) * 100) || 0;
-  
-  const card1 = document.getElementById("c1");
-  document.getElementById("v1").textContent = pctCond1 + "%";
-  document.getElementById("b1").textContent = pctCond1 > 25 ? "ALERTA CRÍTICA" : "ESTABLE";
-  document.getElementById("b1").className = "card-status " + (pctCond1 > 25 ? "status-r" : "status-v");
-  card1.className = "cond-card " + (pctCond1 > 25 ? "rojo" : "verde");
+  const well=document.getElementById('wellSel').value;
+  document.getElementById('mainTitle').textContent = well=='ALL' ? 'Predicción LSTM — Días Restantes' : 'Predicción LSTM — Pozo: '+well;
 
-  const rawWaters = timelineSorted.map(r => parseFloat(r['Water_rate_bbl_d']) || 0);
-  const totalWaterCutCount = timelineSorted.filter((r, idx) => {
-    const fluidSum = rawOils[idx] + rawWaters[idx];
-    return fluidSum > 0 && (rawWaters[idx] / fluidSum) > 0.80;
+  const total=data.length;
+
+  // Cond 1: caída oil > 25%
+  const oilVals=data.map(r=>parseFloat(r['Oil_rate_bbl_d'])||0);
+  const caida=data.filter((r,i)=>i>0&&oilVals[i]<oilVals[i-1]*0.75).length;
+  const pct1=Math.round((caida/total)*100);
+  const crit1=pct1>25;
+  document.getElementById('val1').textContent=pct1+'%';
+  document.getElementById('val1').style.color=crit1?'var(--red)':'var(--green)';
+  document.getElementById('badge1').textContent=crit1?'🔴 CRÍTICO':'🟢 NORMAL';
+  document.getElementById('badge1').className='cond-badge '+(crit1?'badge-red':'badge-green');
+  document.getElementById('card1').className='cond-card '+(crit1?'rojo':'verde');
+  document.getElementById('prog1').style.width=Math.min(pct1,100)+'%';
+  document.getElementById('prog1').style.background=crit1?'var(--red)':'var(--green)';
+
+  // Cond 2: water cut > 80%
+  const wcAltos=data.filter(r=>{
+    const o=parseFloat(r['Oil_rate_bbl_d'])||0;
+    const w=parseFloat(r['Water_rate_bbl_d'])||0;
+    return (o+w)>0 && (w/(o+w))>0.80;
   }).length;
-  const pctCond2 = Math.round((totalWaterCutCount / timelineSorted.length) * 100) || 0;
+  const pct2=Math.round((wcAltos/total)*100);
+  const crit2=pct2>80;
+  document.getElementById('val2').textContent=pct2+'%';
+  document.getElementById('val2').style.color=crit2?'var(--red)':pct2>50?'var(--amber)':'var(--green)';
+  document.getElementById('badge2').textContent=crit2?'🔴 CRÍTICO':pct2>50?'🟡 ALERTA':'🟢 NORMAL';
+  document.getElementById('badge2').className='cond-badge '+(crit2?'badge-red':pct2>50?'badge-amber':'badge-green');
+  document.getElementById('card2').className='cond-card '+(crit2?'rojo':pct2>50?'amarillo':'verde');
+  document.getElementById('prog2').style.width=Math.min(pct2,100)+'%';
+  document.getElementById('prog2').style.background=crit2?'var(--red)':pct2>50?'var(--amber)':'var(--green)';
 
-  const card2 = document.getElementById("c2");
-  document.getElementById("v2").textContent = pctCond2 + "%";
-  document.getElementById("b2").textContent = pctCond2 > 80 ? "CRÍTICO" : pctCond2 > 40 ? "PREVENTIVO" : "OPTIMO";
-  document.getElementById("b2").className = "card-status " + (pctCond2 > 80 ? "status-r" : pctCond2 > 40 ? "status-a" : "status-v");
-  card2.className = "cond-card " + (pctCond2 > 80 ? "rojo" : pctCond2 > 40 ? "amarillo" : "verde");
-
-  const ltsmLowRec = timelineSorted.filter(r => {
-    const lpred = parseFloat(r['Prediccion_LSTM_Dias']) || 0;
-    const lreal = parseFloat(r['Dias_Restantes']) || 1;
-    return lreal > 0 && (lpred / lreal) < 0.75;
+  // Cond 3: recuperación futura < 75%
+  const bajaRec=data.filter(r=>{
+    const dias=parseFloat(r['Prediccion_LSTM_Dias'])||0;
+    const real=parseFloat(r['Dias_Restantes'])||1;
+    return real>0 && (dias/real)<0.75;
   }).length;
-  const pctCond3 = Math.round((ltsmLowRec / timelineSorted.length) * 100) || 0;
+  const pct3=Math.round((bajaRec/total)*100);
+  const crit3=pct3>75;
+  document.getElementById('val3').textContent=pct3+'%';
+  document.getElementById('val3').style.color=crit3?'var(--red)':pct3>50?'var(--amber)':'var(--green)';
+  document.getElementById('badge3').textContent=crit3?'🔴 CRÍTICO':pct3>50?'🟡 ALERTA':'🟢 NORMAL';
+  document.getElementById('badge3').className='cond-badge '+(crit3?'badge-red':pct3>50?'badge-amber':'badge-green');
+  document.getElementById('card3').className='cond-card '+(crit3?'rojo':pct3>50?'amarillo':'verde');
+  document.getElementById('prog3').style.width=Math.min(pct3,100)+'%';
+  document.getElementById('prog3').style.background=crit3?'var(--red)':pct3>50?'var(--amber)':'var(--green)';
 
-  const card3 = document.getElementById("c3");
-  document.getElementById("v3").textContent = pctCond3 + "%";
-  document.getElementById("b3").textContent = pctCond3 > 75 ? "DESVIACIÓN" : "DENTRO DE MATRIZ";
-  document.getElementById("b3").className = "card-status " + (pctCond3 > 75 ? "status-r" : "status-v");
-  card3.className = "cond-card " + (pctCond3 > 75 ? "rojo" : "verde");
+  const sorted=data.sort((a,b)=>new Date(a['Date'])-new Date(b['Date']));
+  const dates=sorted.map(r=>r['Date']?r['Date'].substring(0,10):'');
+  const diasReal=sorted.map(r=>parseFloat(r['Dias_Restantes'])||null);
+  const diasPred=sorted.map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||null);
 
+  // 1. Gráfico Predicción LSTM
+  destroyChart('pred');
+  charts['pred']=new Chart(document.getElementById('chartPred'),{
+    type:'line',
+    data:{labels:dates,datasets:[
+      {label:'Días Reales',data:diasReal,borderColor:'#00e5a0',borderWidth:2,pointRadius:0,tension:0.1},
+      {label:'Predicción LSTM',data:diasPred,borderColor:'#ff3c5a',borderWidth:2,pointRadius:0,tension:0.1,borderDash:[4,4]}
+    ]},
+    options:{...chartDefaults}
+  });
 
-  // --- FILA 2 - COLUMNA 1: GRÁFICO CON MODELO LSTM ---
-  const yRealDays = timelineSorted.map(r => parseFloat(r['Dias_Restantes']) || null);
-  const yPredDays = timelineSorted.map(r => parseFloat(r['Prediccion_LSTM_Dias']) || null);
+  // 2. Distribución de Alertas
+  const nCrit=data.filter(r=>(r['Alerta']||'').includes('CRITICO')).length;
+  const nAlert=data.filter(r=>(r['Alerta']||'').includes('ALERTA')).length;
+  const nNorm=data.filter(r=>(r['Alerta']||'').includes('NORMAL')).length;
 
-  clearPreviousCanvasInstance("lstm");
-  activeCharts["lstm"] = new Chart(document.getElementById("canvasLSTM"), {
-    type: 'line',
-    data: {
-      labels: xLabels,
-      datasets: [
-        { label: 'Real', data: yRealDays, borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0, tension: 0.1 },
-        { label: 'LSTM', data: yPredDays, borderColor: '#ff3c5a', borderWidth: 2, pointRadius: 0, borderDash: [4, 4], tension: 0.1 }
-      ]
+  destroyChart('alerts');
+  charts['alerts']=new Chart(document.getElementById('chartAlerts'),{
+    type:'doughnut',
+    data:{
+      labels:['Crítico','Alerta','Normal'],
+      datasets:[{data:[nCrit,nAlert,nNorm],backgroundColor:['#ff3c5a','#ffb830','#00e5a0'],borderWidth:0}]
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 9, family: "'JetBrains Mono'" } } } },
-      scales: { x: buildDefensiveXAxis(xLabels), y: baseCommonYAxis }
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'70%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"},boxWidth:10}}}
     }
   });
 
-
-  // --- FILA 2 - COLUMNA 2: COMPARATIVA HIDRODINÁMICA FÍSICA ---
-  const yHydroOil = timelineSorted.map(r => parseFloat(r['Oil_rate_bbl_d']) || 0);
-  const yHydroWater = timelineSorted.map(r => parseFloat(r['Water_rate_bbl_d']) || 0);
-  const yHydroGas = timelineSorted.map(r => parseFloat(r['Gas_rate_mscf_d']) || parseFloat(r['Gas_Mscf']) || 0);
-
-  clearPreviousCanvasInstance("hydro");
-  activeCharts["hydro"] = new Chart(document.getElementById("canvasHydro"), {
-    type: 'line',
-    data: {
-      labels: xLabels,
-      datasets: [
-        { label: 'Oil', data: yHydroOil, borderColor: '#00e5a0', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
-        { label: 'Water', data: yHydroWater, borderColor: '#3b9eff', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
-        { label: 'Gas', data: yHydroGas, borderColor: '#ff6eb4', borderWidth: 1, pointRadius: 0, tension: 0.1 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 9, family: "'JetBrains Mono'" } } } },
-      scales: { x: buildDefensiveXAxis(xLabels), y: baseCommonYAxis }
-    }
+  // 3. Lift System
+  const liftCounts={};
+  data.forEach(r=>{const l=r['Lift_system']||'Desconocido';liftCounts[l]=(liftCounts[l]||0)+1;});
+  destroyChart('lift');
+  charts['lift']=new Chart(document.getElementById('chartLift'),{
+    type:'bar',
+    data:{labels:Object.keys(liftCounts),datasets:[{data:Object.values(liftCounts),backgroundColor:['#3b9eff','#ff6eb4','#ffb830'],borderRadius:4}]},
+    options:{...chartDefaults}
   });
 
+  // 4. Oil vs Water
+  const step=Math.max(1,Math.floor(sorted.length/60));
+  const datesS=dates.filter((_,i)=>i%step===0);
+  const oilS=oilVals.filter((_,i)=>i%step===0);
+  const waterS=data.map(r=>parseFloat(r['Water_rate_bbl_d'])||0).filter((_,i)=>i%step===0);
 
-  // --- FILA 2 - COLUMNA 3: MONITOREO DIARIO OPERATIVIDAD (LÍNEA SUAVIZADA EXIGIDA TENSION 0.4) ---
-  const yOperatividad = timelineSorted.map(r => {
-    return r['Uptime_pct'] ? parseFloat(r['Uptime_pct']) : (parseFloat(r['Efficiency']) || 93.9);
+  destroyChart('oilwater');
+  charts['oilwater']=new Chart(document.getElementById('chartOilWater'),{
+    type:'line',
+    data:{labels:datesS,datasets:[
+      {label:'Oil',data:oilS,borderColor:'#00e5a0',borderWidth:1.5,pointRadius:0,tension:0.1},
+      {label:'Water',data:waterS,borderColor:'#3b9eff',borderWidth:1.5,pointRadius:0,tension:0.1}
+    ]},
+    options:{...chartDefaults}
   });
 
-  clearPreviousCanvasInstance("uptime");
-  activeCharts["uptime"] = new Chart(document.getElementById("canvasOperatividad"), {
-    type: 'line',
-    data: {
-      labels: xLabels,
-      datasets: [{
-        label: 'Uptime Promedio Diario %',
-        data: yOperatividad,
-        borderColor: '#3b9eff',
-        backgroundColor: 'rgba(59, 158, 255, 0.02)',
-        fill: true,
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.4 // Suavizado estricto curvo solicitado
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: buildDefensiveXAxis(xLabels), y: baseCommonYAxis }
-    }
+  // 5. Promedio de Días por Pozo
+  const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].sort();
+  const avgDias=wells.map(w=>{
+    const vals=dfPred.filter(r=>r['Well_ID']===w).map(r=>parseFloat(r['Prediccion_LSTM_Dias'])||0);
+    return Math.round(avg(vals));
   });
-
-
-  // --- FILA 3 - COLUMNA 1: N° ALERTAS POR NIVEL (GRÁFICO DE BARRAS EXIGIDO) ---
-  const countHigh = dataset.filter(r => (r['Alerta']||'').includes('CRITICO') || (r['Alerta']||'').includes('Alto')).length;
-  const countMed = dataset.filter(r => (r['Alerta']||'').includes('ALERTA') || (r['Alerta']||'').includes('Medio')).length;
-  const countLow = dataset.filter(r => (r['Alerta']||'').includes('NORMAL') || (r['Alerta']||'').includes('Bajo')).length || (dataset.length - (countHigh + countMed));
-
-  clearPreviousCanvasInstance("alertsBar");
-  activeCharts["alertsBar"] = new Chart(document.getElementById("canvasAlertas"), {
-    type: 'bar',
-    data: {
-      labels: ['Alto (Crítico)', 'Medio (Alerta)', 'Bajo (Normal)'],
-      datasets: [{
-        data: [countHigh, countMed, countLow],
-        backgroundColor: ['#ff3c5a', '#ffb830', '#00e5a0'],
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { font: { size: 9, family: "'JetBrains Mono'" }, color: '#5a6278' }, grid: { display: false } },
-        y: baseCommonYAxis
-      }
-    }
-  });
-
-
-  // --- FILA 3 - COLUMNA 2: % MÉTODO DE EXTRACCIÓN (GRAFICO DE TORTA PURA EXIGIDO) ---
-  const liftAggregations = {};
-  dataset.forEach(r => {
-    const method = r['Lift_system'] || 'NaturalFlow';
-    liftAggregations[method] = (liftAggregations[method] || 0) + 1;
-  });
-
-  clearPreviousCanvasInstance("liftPie");
-  activeCharts["liftPie"] = new Chart(document.getElementById("canvasLiftPie"), {
-    type: 'pie', // Torta pura sin hueco central
-    data: {
-      labels: Object.keys(liftAggregations),
-      datasets: [{
-        data: Object.values(liftAggregations),
-        backgroundColor: ['#3b9eff', '#ff6eb4', '#ffb830', '#a78bfa', '#00e5a0'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: { color: '#94a3b8', font: { size: 9, family: "'JetBrains Mono'" }, boxWidth: 10 }
-        }
-      }
-    }
-  });
-
-
-  // --- FILA 3 - COLUMNA 3: N° BARRILES DE PETRÓLEO POR MÉTODO ---
-  const barrelsPerMethod = {};
-  dataset.forEach(r => {
-    const method = r['Lift_system'] || 'NaturalFlow';
-    const volume = parseFloat(r['Oil_rate_bbl_d']) || 0;
-    barrelsPerMethod[method] = (barrelsPerMethod[method] || 0) + volume;
-  });
-
-  clearPreviousCanvasInstance("volumenBar");
-  activeCharts["volumenBar"] = new Chart(document.getElementById("canvasVolumenBar"), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(barrelsPerMethod),
-      datasets: [{
-        data: Object.values(barrelsPerMethod).map(v => Math.round(v)),
-        backgroundColor: '#3b9eff',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { font: { size: 9, family: "'JetBrains Mono'" }, color: '#5a6278' }, grid: { display: false } },
-        y: baseCommonYAxis
-      }
-    }
+  destroyChart('wellavg');
+  charts['wellavg']=new Chart(document.getElementById('chartWellAvg'),{
+    type:'bar',
+    data:{labels:wells,datasets:[{data:avgDias,backgroundColor:'#3b9eff',borderRadius:4}]},
+    options:{...chartDefaults}
   });
 }
 
-// Inicialización de ciclo de vida
-startInitialization();
+loadData();
 </script>
 </body>
 </html>
