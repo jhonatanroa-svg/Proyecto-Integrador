@@ -35,6 +35,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
 .status-pill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
 .status-pill.ok{border-color:var(--green);color:var(--green);}
+.status-pill.err{border-color:var(--red);color:var(--red);}
 
 .filters{
   display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
@@ -52,7 +53,6 @@ select{padding-right:28px;appearance:none;
 
 .main{padding:1.5rem 2rem;}
 
-/* MATRIZ DE CONDICIONES (FILA 1) */
 .conditions-grid{display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;}
 .cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;}
 .cond-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;}
@@ -70,7 +70,6 @@ select{padding-right:28px;appearance:none;
 .progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
 .progress-fill{height:100%;transition:width .6s ease;}
 
-/* FILAS DE LA MATRIZ DE GRÁFICOS (FILAS 2 Y 3) */
 .matrix-row-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.25rem; }
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 340px; display: flex; flex-direction: column; justify-content: space-between;}
 .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
@@ -93,7 +92,7 @@ select{padding-right:28px;appearance:none;
 <div class="loading-screen" id="loadingScreen">
   <div class="loader"></div>
   <h2>Sincronizando Sistema Hidrodinámico...</h2>
-  <p id="loadingMsg">Mapeando índices de tiempo...</p>
+  <p id="loadingMsg">Consumiendo predicciones de la API LSTM local...</p>
 </div>
 
 <div id="app" style="display:none;">
@@ -101,7 +100,7 @@ select{padding-right:28px;appearance:none;
   <div class="header">
     <div>
       <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
-      <div class="header-sub">Indexación temporal unificada · Sin cruces asimétricos</div>
+      <div class="header-sub">Conectado a API Flask · Inferencia LSTM en Tiempo Real</div>
     </div>
     <div id="statusPill" class="status-pill">Cargando...</div>
   </div>
@@ -194,43 +193,38 @@ select{padding-right:28px;appearance:none;
 </div>
 
 <script>
-// Fuentes de datos unificadas
-const URL_PROD = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_rlq6VhoU4fgWduJN1tTabZXLORDQpjYOxahQIBNiFHC6KQ2Kqi8hG4NvIIlRSnfEzr-yKm9K7EAa/pub?gid=1809707117&single=true&output=csv";
-const URL_PRED = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4FiA0jBinWUnvKoGeb-za6-oKXxQKVUd-u6ao4JCF8S4LZrdzIdUUXvt-oP3ex2s5PI87FJZZS7yd/pub?gid=2013598279&single=true&output=csv";
+// Dirección unificada de tu API REST ejecutándose localmente en PyCharm
+const URL_API = "http://127.0.0.1:5000/api/predicciones";
 
-let dfProd = [], dfPred = [], charts = {};
-
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
-  return lines.slice(1).map(line => {
-    const cols = []; let cur='', inQ=false;
-    for(let c of line){ if(c==='"') inQ=!inQ; else if(c===','&&!inQ){cols.push(cur.trim());cur='';} else cur+=c; }
-    cols.push(cur.trim());
-    const obj={}; headers.forEach((h,i)=>obj[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
-    return obj;
-  });
-}
+let dfPred = [], charts = {};
 
 function setStatus(msg,state){ const el=document.getElementById('statusPill'); el.textContent=msg; el.className='status-pill '+(state||''); }
 
 async function loadData(){
   try{
-    const r1 = await fetch(URL_PROD); dfProd = parseCSV(await r1.text());
-    const r2 = await fetch(URL_PRED); dfPred = parseCSV(await r2.text());
-    setStatus('● Base Sincronizada Corrientemente','ok');
+    // Consumimos el JSON directamente desde tu servidor local Flask
+    const response = await fetch(URL_API);
+    if (!response.ok) throw new Error("API desconectada");
+    
+    dfPred = await response.json();
+    
+    setStatus('● API Local Conectada Corrientemente','ok');
     buildFilters();
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('app').style.display='block';
     render();
   } catch(e){
-    setStatus('Error de conexión','err');
+    setStatus('Error: Enciende la celda en PyCharm','err');
+    document.getElementById('loadingMsg').innerHTML = "<span style='color:#ff3c5a;'>No se pudo conectar al servidor local.<br>Por favor, dale Play a la celda en PyCharm e intenta recargar.</span>";
+    console.error(e);
   }
 }
 
 function buildFilters(){
-  const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].sort();
+  const wells=[...new Set(dfPred.map(r=>r['Well_ID']))].filter(Boolean).sort();
   const sel=document.getElementById('wellSel');
+  // Limpiar opciones previas exceptuando "Todos"
+  sel.innerHTML = '<option value="ALL">Todos los pozos</option>';
   wells.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent=w;sel.appendChild(o);});
 
   const dates=dfPred.map(r=>r['Date']).filter(Boolean).sort();
@@ -258,7 +252,6 @@ function getFiltered(){
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// Configuración anti-colisión estricta para evitar los '#######' en fechas
 const chartDefaults={
   responsive:true,maintainAspectRatio:false,
   interaction:{mode:'index',intersect:false},
@@ -283,7 +276,7 @@ function render(){
   // --- CONDICIONES DE CONTROL ---
   const oilVals=sorted.map(r=>parseFloat(r['Oil_rate_bbl_d'])||0);
   const caida=sorted.filter((r,i)=>i>0&&oilVals[i]<oilVals[i-1]*0.75).length;
-  const pct1=Math.round((caida/total)*100);
+  const pct1=Math.round((caida/total)*100) || 0;
   const crit1=pct1>25;
   document.getElementById('val1').textContent=pct1+'%';
   document.getElementById('card1').className='cond-card '+(crit1?'rojo':'verde');
@@ -296,7 +289,7 @@ function render(){
     const o=parseFloat(r['Oil_rate_bbl_d'])||0; const w=parseFloat(r['Water_rate_bbl_d'])||0;
     return (o+w)>0 && (w/(o+w))>0.80;
   }).length;
-  const pct2=Math.round((wcAltos/total)*100);
+  const pct2=Math.round((wcAltos/total)*100) || 0;
   const crit2=pct2>80;
   document.getElementById('val2').textContent=pct2+'%';
   document.getElementById('card2').className='cond-card '+(crit2?'rojo':'verde');
@@ -309,7 +302,7 @@ function render(){
     const d=parseFloat(r['Prediccion_LSTM_Dias'])||0; const real=parseFloat(r['Dias_Restantes'])||1;
     return real>0 && (d/real)<0.75;
   }).length;
-  const pct3=Math.round((bajaRec/total)*100);
+  const pct3=Math.round((bajaRec/total)*100) || 0;
   const crit3=pct3>75;
   document.getElementById('val3').textContent=pct3+'%';
   document.getElementById('card3').className='cond-card '+(crit3?'rojo':'verde');
@@ -329,17 +322,14 @@ function render(){
     options:{...chartDefaults}
   });
 
-  // --- 2. HIDRODINÁMICA FÍSICA (Indexada sin combinaciones destructivas) ---
+  // --- 2. HIDRODINÁMICA FÍSICA ---
   const step=Math.max(1,Math.floor(sorted.length/40));
   const datesS=dates.filter((_,i)=>i%step===0);
   const oilS=oilVals.filter((_,i)=>i%step===0);
   const waterS=sorted.map(r=>parseFloat(r['Water_rate_bbl_d'])||0).filter((_,i)=>i%step===0);
   
-  // Mapeo seguro del volumen de gas buscando la correlación por fecha en dfProd
-  const gasS=sorted.filter((_,i)=>i%step===0).map(r => {
-    const match = dfProd.find(p => p['Date'] === r['Date'] && p['Well_ID'] === r['Well_ID']);
-    return match ? parseFloat(match['Gas_rate_mscf_d']) || 0 : 0;
-  });
+  // Al venir de la API integrada, el Gas ya viene acoplado directamente en el registro
+  const gasS=sorted.map(r=>parseFloat(r['Gas_rate_mscf_d'])||0).filter((_,i)=>i%step===0);
 
   destroyChart('oilwater');
   charts['oilwater']=new Chart(document.getElementById('chartOilWater'),{
@@ -352,11 +342,8 @@ function render(){
     options:{...chartDefaults}
   });
 
-  // --- 3. MONITOREO DIARIO DE OPERATIVIDAD (UPTIME REACTIVO) ---
-  const uptimeS=sorted.filter((_,i)=>i%step===0).map(r => {
-    const match = dfProd.find(p => p['Date'] === r['Date'] && p['Well_ID'] === r['Well_ID']);
-    return match ? parseFloat(match['Uptime_pct']) || 94.1 : 94.1; 
-  });
+  // --- 3. MONITOREO DIARIO DE OPERATIVIDAD (UPTIME) ---
+  const uptimeS=sorted.map(r=>parseFloat(r['Uptime_pct'])||94.1).filter((_,i)=>i%step===0);
 
   destroyChart('uptime');
   charts['uptime']=new Chart(document.getElementById('chartUptime'),{
@@ -386,7 +373,7 @@ function render(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"}}}}}
   });
 
-  // --- 6. BARRILES DE PETRÓLEO POR MÉTODO (VOLUMEN REAL ACUMULADO) ---
+  // --- 6. BARRILES DE PETRÓLEO POR MÉTODO ---
   const methodVols={};
   sorted.forEach(r=>{
     const l=r['Lift_system']||'NaturalFlow';
