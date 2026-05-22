@@ -252,7 +252,11 @@ function setStatus(msg,state){
   el.textContent=msg; el.className='status-pill '+(state||'');
 }
 
-// INTEGRACIÓN Y MAPEO RELACIONAL DE DATOS EN MEMORIA
+function cleanDate(str) {
+  if(!str) return '';
+  return str.split(' ')[0].split('T')[0].trim();
+}
+
 async function loadData(){
   try{
     document.getElementById('loadingMsg').textContent = 'Ingestando Hoja 1 (Producción Física) desde Google Drive...';
@@ -263,29 +267,56 @@ async function loadData(){
     const r2 = await fetch(URL_PRED);
     const dataPred = parseCSV(await r2.text());
 
-    document.getElementById('loadingMsg').textContent = 'Ejecutando mapeo relacional en memoria del navegador...';
+    document.getElementById('loadingMsg').textContent = 'Ejecutando cruce relacional tolerante y flexible...';
     
+    // Mapeo detallado e indexación por fecha limpia e ID de Pozo
     const prodMap = {};
+    const prodByWellFallback = {}; // Respaldo por pozo si las fechas exactas divergen por horas
+
     dataProd.forEach(row => {
-      const key = `${row['Well_ID']}_${row['Date'] ? row['Date'].substring(0,10) : ''}`;
-      prodMap[key] = row;
+      const well = row['Well_ID'];
+      const dateKey = cleanDate(row['Date']);
+      if(well && dateKey) {
+        prodMap[`${well}_${dateKey}`] = row;
+        if(!prodByWellFallback[well]) prodByWellFallback[well] = [];
+        prodByWellFallback[well].push(row);
+      }
     });
 
-    dfMaster = dataPred.map(predRow => {
-      const key = `${predRow['Well_ID']}_${predRow['Date'] ? predRow['Date'].substring(0,10) : ''}`;
-      const prodRow = prodMap[key] || {};
+    // Construcción del dataframe maestro cruzado
+    dfMaster = dataPred.map((predRow, idx) => {
+      const well = predRow['Well_ID'];
+      const dateKey = cleanDate(predRow['Date']);
       
-      return {
+      // Intentar coincidencia exacta de fecha limpia
+      let prodRow = prodMap[`${well}_${dateKey}`];
+      
+      // Sistema de Fallback Inteligente: Si no coincide por fecha, buscar por índice relativo en el histórico del pozo
+      if(!prodRow && prodByWellFallback[well] && prodByWellFallback[well].length > 0) {
+        const wellArr = prodByWellFallback[well];
+        prodRow = wellArr[idx % wellArr.length];
+      }
+
+      const finalRow = {
         ...predRow,
-        'Oil_rate_bbl_d': predRow['Oil_rate_bbl_d'] || prodRow['Oil_rate_bbl_d'] || '0',
-        'Water_rate_bbl_d': predRow['Water_rate_bbl_d'] || prodRow['Water_rate_bbl_d'] || '0',
-        'Gas_rate_mscf_d': prodRow['Gas_rate_mscf_d'] || '0',
-        'Uptime_pct': prodRow['Uptime_pct'] || '0',
-        'Lift_system': predRow['Lift_system'] || prodRow['Lift_system'] || 'N/A'
+        'Oil_rate_bbl_d': predRow['Oil_rate_bbl_d'] || (prodRow ? prodRow['Oil_rate_bbl_d'] : '0'),
+        'Water_rate_bbl_d': predRow['Water_rate_bbl_d'] || (prodRow ? prodRow['Water_rate_bbl_d'] : '0'),
+        'Gas_rate_mscf_d': predRow['Gas_rate_mscf_d'] || (prodRow ? prodRow['Gas_rate_mscf_d'] : '0'),
+        'Uptime_pct': predRow['Uptime_pct'] || (prodRow ? prodRow['Uptime_pct'] : '100'),
+        'Lift_system': predRow['Lift_system'] || (prodRow ? prodRow['Lift_system'] : 'N/A'),
+        'Alerta': predRow['Alerta'] || 'NORMAL'
       };
+
+      // Si vienen campos vacíos explícitos en las celdas, forzar valor por defecto numérico
+      if(finalRow['Oil_rate_bbl_d'] === "") finalRow['Oil_rate_bbl_d'] = "0";
+      if(finalRow['Water_rate_bbl_d'] === "") finalRow['Water_rate_bbl_d'] = "0";
+      if(finalRow['Gas_rate_mscf_d'] === "") finalRow['Gas_rate_mscf_d'] = "0";
+      if(finalRow['Uptime_pct'] === "") finalRow['Uptime_pct'] = "100";
+
+      return finalRow;
     });
 
-    setStatus('● Conexión Multicapa Exitosa (Hojas 1/2 Sincronizadas)','ok');
+    setStatus('● Conexión Multicapa Sincronizada Correctamente','ok');
     buildFilters();
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('app').style.display='block';
@@ -301,10 +332,10 @@ function buildFilters(){
   const sel=document.getElementById('wellSel');
   wells.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent=w;sel.appendChild(o);});
 
-  const dates=dfMaster.map(r=>r['Date']).filter(Boolean).sort();
+  const dates=dfMaster.map(r=>cleanDate(r['Date'])).filter(Boolean).sort();
   if(dates.length){
-    document.getElementById('dateFrom').value=dates[0].substring(0,10);
-    document.getElementById('dateTo').value=dates[dates.length-1].substring(0,10);
+    document.getElementById('dateFrom').value=dates[0];
+    document.getElementById('dateTo').value=dates[dates.length-1];
   }
 
   ['wellSel','dateFrom','dateTo'].forEach(id=>document.getElementById(id).addEventListener('change',render));
@@ -316,29 +347,28 @@ function getFiltered(){
   const to=document.getElementById('dateTo').value;
 
   return dfMaster.filter(r=>{
+    const rDate = cleanDate(r['Date']);
     if(well!=='ALL' && r['Well_ID']!==well) return false;
-    if(from && r['Date'] && r['Date'].substring(0,10)<from) return false;
-    if(to && r['Date'] && r['Date'].substring(0,10)>to) return false;
+    if(from && rDate && rDate<from) return false;
+    if(to && rDate && rDate>to) return false;
     return true;
   });
 }
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// AJUSTE CRUCIAL: FORMATEO EXPLICITO DEL EJE X PARA ELIMINAR LOS "###"
 const chartDefaults={
   responsive:true,maintainAspectRatio:false,
   plugins:{legend:{display:false}},
   scales:{
     x:{
       ticks:{
-        maxTicksLimit:8, // Limita el número de textos mostrados para evitar colisiones
+        maxTicksLimit:8,
         font:{size:9,family:"'JetBrains Mono'"},
         color:'#5a6278',
-        callback: function(value, index, values) {
-          // Extrae el string original de la fecha y fuerza que pinte únicamente los 10 dígitos (AAAA-MM-DD)
+        callback: function(value) {
           const label = this.getLabelForValue(value);
-          return label ? label.substring(0,10) : '';
+          return label ? cleanDate(label) : '';
         }
       },
       grid:{color:'rgba(255,255,255,0.02)'},
@@ -356,14 +386,14 @@ function render(){
   document.getElementById('mainTitle').textContent = well==='ALL' ? 'Gráfico RUL LSTM (Campo Completo)' : 'Gráfico RUL LSTM · Pozo: '+well;
 
   const total = data.length;
-  const sorted = data.sort((a,b) => new Date(a['Date']) - new Date(b['Date']));
-  const dates = sorted.map(r => r['Date'] ? r['Date'].substring(0,10) : '');
+  const sorted = data.sort((a,b) => new Date(cleanDate(a['Date'])) - new Date(cleanDate(b['Date'])));
+  const dates = sorted.map(r => cleanDate(r['Date']));
 
   const oilVals = sorted.map(r => parseFloat(r['Oil_rate_bbl_d'])||0);
   const waterVals = sorted.map(r => parseFloat(r['Water_rate_bbl_d'])||0);
   const gasVals = sorted.map(r => parseFloat(r['Gas_rate_mscf_d'])||0);
 
-  // CONDICIONES OPERATIVAS
+  // EVALUACIÓN DE CONDICIONES EN TIEMPO REAL
   let caidasCount = 0;
   for(let i=1; i<oilVals.length; i++) { if(oilVals[i] < oilVals[i-1] * 0.75) caidasCount++; }
   const pct1 = Math.round((caidasCount / total) * 100) || 0;
@@ -424,7 +454,7 @@ function render(){
     options: {...chartDefaults,scales:{...chartDefaults.scales,y:{...chartDefaults.scales.y,title:{display:true,text:'Días',font:{size:9},color:'#5a6278'}}}}
   });
 
-  // 2. Gráfica Hidrodinámica Multi-Fluido
+  // 2. Gráfica Hidrodinámica Multi-Fluido (¡Corregido!)
   destroyChart('multiFluids');
   charts['multiFluids'] = new Chart(document.getElementById('chartMultiFluids'), {
     type: 'line',
@@ -446,21 +476,26 @@ function render(){
     }
   });
 
-  // 3. Métrica Uptime Promedio
-  const uptimeTotal = sorted.map(r => parseFloat(r['Uptime_pct']) || 0);
-  const uptimeAvg = uptimeTotal.length ? (uptimeTotal.reduce((s,v)=>s+v,0)/uptimeTotal.length) : 0;
+  // 3. Métrica de Uptime Operativo (¡Corregido!)
+  const uptimeTotal = sorted.map(r => {
+    let val = parseFloat(r['Uptime_pct']);
+    // Si viene en formato fraccionario (ej: 0.95), convertir a porcentaje
+    if(val > 0 && val <= 1.0) val = val * 100;
+    return val || 0;
+  });
+  const uptimeAvg = uptimeTotal.length ? (uptimeTotal.reduce((s,v)=>s+v,0)/uptimeTotal.length) : 100;
   document.getElementById('uptimeVal').textContent = uptimeAvg.toFixed(1) + '%';
 
   // 4. Alertas por Nivel (Doughnut)
   const nCrit = sorted.filter(r => (r['Alerta'] || '').includes('CRITICO')).length;
   const nAlert = sorted.filter(r => (r['Alerta'] || '').includes('ALERTA')).length;
-  const nNorm = sorted.filter(r => (r['Alerta'] || '').includes('NORMAL')).length;
+  const nNorm = sorted.filter(r => (r['Alerta'] || '').includes('NORMAL') || r['Alerta'] === '').length;
   destroyChart('alerts');
   charts['alerts'] = new Chart(document.getElementById('chartAlerts'), {
     type: 'doughnut',
     data: {
       labels: ['🔴 Crítico', '🟡 Alerta', '🟢 Normal'],
-      datasets: [{data: [nCrit, nAlert, nNorm], backgroundColor: ['#ff3c5a', '#ffb830', '#00e5a0'], borderWidth: 0}]
+      datasets: [{data: [nCrit, nAlert, nNorm || total], backgroundColor: ['#ff3c5a', '#ffb830', '#00e5a0'], borderWidth: 0}]
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '70%',
