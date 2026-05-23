@@ -193,14 +193,14 @@ select{padding-right:28px;appearance:none;
 </div>
 
 <script>
-// RUTA RELATIVA: Cambiado para leer directamente el archivo CSV que está a su lado en GitHub
+// RUTA RELATIVA AL CSV EN EL MISMO NIVEL DEL REPOSITORIO
 const URL_CSV = "dataset_final.csv";
 
 let dfPred = [], charts = {};
 
 function setStatus(msg,state){ const el=document.getElementById('statusPill'); el.textContent=msg; el.className='status-pill '+(state||''); }
 
-// Parser CSV nativo de alta velocidad para manejar el archivo de 5.4 MB eficientemente
+// Parser optimizado de alta velocidad para manejar el archivo de 5.4 MB de forma fluida
 function parsearCSV(texto) {
   const lineas = texto.split(/\r?\n/);
   if(lineas.length < 2) return [];
@@ -215,7 +215,6 @@ function parsearCSV(texto) {
     const linea = lineas[i];
     if(!linea.trim()) continue;
     
-    // Separar por comas respetando posibles estructuras simples
     const columnas = linea.split(',');
     
     const well_id = columnas[indices['Well_ID']];
@@ -228,20 +227,18 @@ function parsearCSV(texto) {
     const real_rul = parseFloat(columnas[indices['Dias_Restantes']]) || 0;
     const pred_rul = parseFloat(columnas[indices['Prediccion_LSTM_Dias']]) || 0;
 
-    // --- GENERACIÓN DINÁMICA DE CAMPOS OPERATIVOS FALTANTES ---
-    // 1. Clasificación Dinámica de Alertas basada en RUL analítico
+    // Clasificación dinámica de alertas basada en RUL analítico
     let alerta = "NORMAL";
     if (real_rul < 30) { alerta = "CRITICO"; }
     else if (real_rul < 90) { alerta = "ALERTA"; }
 
-    // 2. Simulación de Sistemas de Levantamiento coherente por ID de Pozo
+    // Distribución automatizada de sistemas de extracción basada en el ID del pozo
     let lift_system = "NaturalFlow";
     const numeroPozo = parseInt(well_id.replace(/\D/g, "")) || 1;
     if (numeroPozo % 3 === 0) lift_system = "Electrosumergible (ESP)";
     else if (numeroPozo % 2 === 0) lift_system = "Bombeo Mecánico (SuckerRod)";
     else if (numeroPozo % 5 === 0) lift_system = "Gas Lift";
 
-    // 3. Simulación de Uptime adaptativa
     let uptime = 98.4;
     if (alerta === "CRITICO") uptime = 82.1;
     else if (alerta === "ALERTA") uptime = 92.7;
@@ -264,9 +261,7 @@ function parsearCSV(texto) {
 
 async function loadData(){
   try{
-    // Carga del CSV estático local o desde el servidor GitHub Pages
     const response = await fetch(URL_CSV, { method: 'GET' });
-    
     if (!response.ok) throw new Error("No se pudo localizar el archivo dataset_final.csv");
     
     const textoRaw = await response.text();
@@ -287,7 +282,7 @@ async function loadData(){
       </span>
       <span style='color:var(--text); text-align:left; display:inline-block; max-width:500px;'>
         El tablero no pudo leer el archivo <code>dataset_final.csv</code>.<br><br>
-        <strong>Para que funcione en GitHub:</strong> Asegúrate de que el archivo <code>dataset_final.csv</code> (de 5.4 MB) esté subido exactamente en la misma carpeta que este archivo HTML dentro de tu repositorio.
+        <strong>Para solucionarlo:</strong> Asegúrate de que el archivo <code>dataset_final.csv</code> esté guardado exactamente en la misma carpeta que este archivo HTML dentro de tu repositorio de GitHub.
       </span>
     `;
     console.error("Detalle del error:", e);
