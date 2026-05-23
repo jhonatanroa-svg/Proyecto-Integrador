@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tablero de Seguimiento Preventivo (Optimizado)</title>
+<title>Tablero de Seguimiento Preventivo - Carga Directa</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -18,17 +18,25 @@ body{background:var(--bg);color:var(--text);padding:1.5rem 2rem;}
 .header-title{font-size:20px;font-weight:800;text-transform:uppercase;}
 .header-title span{color:var(--green);}
 .status-pill{font-size:11px;font-family:'JetBrains Mono';padding:5px 12px;border-radius:20px;border:1px solid var(--border);}
-.status-pill.ok{border-color:var(--green);color:var(--green);background:rgba(0,229,160,0.05);}
-.status-pill.warn{border-color:#ffb830;color:#ffb830;background:rgba(255,184,48,0.05);}
-select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-family:'JetBrains Mono';cursor:pointer;}
-.conditions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin:1.5rem 0;}
+.status-pill.waiting{border-color:#ffb830;color:#ffb830;background:rgba(255,184,48,0.05);}
+.status-pill.ready{border-color:var(--green);color:var(--green);background:rgba(0,229,160,0.05);}
+
+.control-panel{background:var(--bg2);padding:1.25rem;border-radius:12px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-bottom:1.5rem;}
+.control-group{display:flex;flex-direction:column;gap:6px;}
+.control-group label{font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
+
+input[type="file"]{color:var(--dim);font-size:12px;font-family:'JetBrains Mono';}
+select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;font-family:'JetBrains Mono';cursor:pointer;}
+
+.conditions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.5rem;}
 .cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
-.cond-header{display:flex;justify-content:space-between;font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.cond-header{font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 .cond-val{font-size:32px;font-weight:700;}
+
 .matrix-row-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;}
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
 .chart-title{font-size:11px;font-family:'JetBrains Mono';color:var(--dim);text-transform:uppercase;margin-bottom:1rem;display:block;}
-.chart-wrap{position:relative;height:240px;width:100%;}
+.chart-wrap{position:relative;height:260px;width:100%;}
 @media(max-width:900px){.matrix-row-grid,.conditions-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -38,12 +46,18 @@ select{background:var(--bg3);color:var(--text);border:1px solid var(--border);bo
   <div>
     <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
   </div>
-  <div id="statusPill" class="status-pill">Sincronizando...</div>
+  <div id="statusPill" class="status-pill waiting">Esperando archivo CSV...</div>
 </div>
 
-<div style="background:var(--bg2);padding:1rem;border-radius:8px;border:1px solid var(--border);">
-  <label style="font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-right:8px;">Pozo Activo:</label>
-  <select id="wellSel"></select>
+<div class="control-panel">
+  <div class="control-group">
+    <label>1. Cargar Base de Datos (CSV)</label>
+    <input type="file" id="csvFileInput" accept=".csv" />
+  </div>
+  <div class="control-group">
+    <label>2. Seleccionar Pozo Activo</label>
+    <select id="wellSel" disabled><option>Cargue un archivo primero...</option></select>
+  </div>
 </div>
 
 <div class="conditions-grid">
@@ -53,41 +67,45 @@ select{background:var(--bg3);color:var(--text);border:1px solid var(--border);bo
 </div>
 
 <div class="matrix-row-grid">
-  <div class="chart-card"><span class="chart-title">Vida Útil Restante (Días Reales vs LSTM)</span><div class="chart-wrap"><canvas id="chartPred"></canvas></div></div>
+  <div class="chart-card"><span class="chart-title">Vida Útil Restante (Días Reales vs Predicción LSTM)</span><div class="chart-wrap"><canvas id="chartPred"></canvas></div></div>
   <div class="chart-card"><span class="chart-title">Historial Dinámico de Fluidos (bbl/d)</span><div class="chart-wrap"><canvas id="chartOilWater"></canvas></div></div>
 </div>
 
 <script>
-const URL_CSV = "dataset_final.csv";
 let dfPred = [];
 let chartPredObj = null, chartOilObj = null;
 
-// Ajustado a Agosto de 2025 para mantener consistencia estricta con tu dataset real
-function generarBackupData() {
-  const backup = [];
-  for(let p=1; p<=24; p++) {
-    const well = `P-${String(p).padStart(2,'0')}`;
-    for(let i=0; i<15; i++) {
-      backup.push({
-        Well_ID: well, Date: `2025-08-${String(i+1).padStart(2,'0')}`,
-        Oil: 1100 - (i*8) + Math.random()*15, Water: 130 + (i*12) + Math.random()*10,
-        Real: Math.max(0, 400-i), Pred: Math.max(0, 395-i + Math.random()*8)
-      });
+// Lector directo de archivos de disco (Elimina problemas de red y bloqueos de seguridad del navegador)
+document.getElementById('csvFileInput').addEventListener('change', function(e) {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
+
+  const lector = new FileReader();
+  lector.onload = function(evt) {
+    dfPred = parsearCSV(evt.target.result);
+    if(dfPred.length > 0) {
+      document.getElementById('statusPill').className = 'status-pill ready';
+      document.getElementById('statusPill').textContent = `● ${dfPred.length} Registros Cargados Exitosamente`;
+      activarSelectorPozos();
+    } else {
+      alert("No se pudieron reconocer las columnas. Verifica la estructura del CSV.");
     }
-  }
-  return backup;
-}
+  };
+  lector.readAsText(archivo);
+});
 
 function parsearCSV(texto) {
   const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
   if(lineas.length < 2) return [];
+  
   const sep = lineas[0].includes(';') ? ';' : ',';
   const cab = lineas[0].split(sep).map(c => c.trim().toLowerCase());
   
+  // Indexación estricta por palabras clave del encabezado real de tu dataset
   const idxW = cab.findIndex(c => c === 'well_id' || c.includes('well') || c.includes('pozo'));
   const idxD = cab.findIndex(c => c === 'date' || c.includes('fecha') || c.includes('time'));
-  const idxO = cab.findIndex(c => c.includes('oil_rate') || c === 'oil' || c.includes('petroleo') || c.includes('q_o'));
-  const idxWc = cab.findIndex(c => c.includes('water_rate') || c === 'water' || c.includes('agua') || c.includes('q_w'));
+  const idxO = cab.findIndex(c => c.includes('oil') || c.includes('petroleo') || c.includes('q_o'));
+  const idxWc = cab.findIndex(c => c.includes('water') || c.includes('agua') || c.includes('q_w'));
   const idxR = cab.findIndex(c => c.includes('restantes') || c.includes('real') || c.includes('rul'));
   const idxP = cab.findIndex(c => c.includes('prediccion') || c.includes('lstm') || c.includes('pred'));
 
@@ -104,21 +122,10 @@ function parsearCSV(texto) {
   });
 }
 
-async function init() {
-  try {
-    const res = await fetch(URL_CSV);
-    if(!res.ok) throw new Error();
-    dfPred = parsearCSV(await res.text());
-    document.getElementById('statusPill').className = 'status-pill ok';
-    document.getElementById('statusPill').textContent = '● Origen CSV Conectado';
-  } catch {
-    dfPred = generarBackupData();
-    document.getElementById('statusPill').className = 'status-pill warn';
-    document.getElementById('statusPill').textContent = '● Modo Autónomo (Respaldo)';
-  }
-  
+function activarSelectorPozos() {
   const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   const sel = document.getElementById('wellSel');
+  sel.removeAttribute('disabled');
   sel.innerHTML = wells.map(w => `<option value="${w}">Pozo ${w}</option>`).join('');
   sel.addEventListener('change', render);
   render();
@@ -126,6 +133,7 @@ async function init() {
 
 function render() {
   const well = document.getElementById('wellSel').value;
+  // Ordenamiento cronológico estricto basado en las fechas nativas del archivo
   const filtered = dfPred.filter(r => r.Well_ID === well).sort((a,b) => new Date(a.Date) - new Date(b.Date));
   if(!filtered.length) return;
   
@@ -163,8 +171,6 @@ function render() {
     ]}, options: opt
   });
 }
-
-window.onload = init;
 </script>
 </body>
 </html>
