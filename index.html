@@ -14,16 +14,16 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Syne',sans-serif;}
 body{background:var(--bg);color:var(--text);padding:1.5rem 2rem;}
-.header{display:flex;justify-content:between;align-items:center;padding-bottom:1rem;border-b:1px solid var(--border);margin-bottom:1rem;}
+.header{display:flex;justify-content:space-between;align-items:center;padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1rem;}
 .header-title{font-size:20px;font-weight:800;text-transform:uppercase;}
 .header-title span{color:var(--green);}
 .status-pill{font-size:11px;font-family:'JetBrains Mono';padding:5px 12px;border-radius:20px;border:1px solid var(--border);}
-.status-pill.ok{border-color:var(--green);color:var(--green);}
-.status-pill.warn{border-color:#ffb830;color:#ffb830;}
+.status-pill.ok{border-color:var(--green);color:var(--green);background:rgba(0,229,160,0.05);}
+.status-pill.warn{border-color:#ffb830;color:#ffb830;background:rgba(255,184,48,0.05);}
 select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-family:'JetBrains Mono';cursor:pointer;}
 .conditions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin:1.5rem 0;}
 .cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
-.cond-header{display:flex;justify-content:between;font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.cond-header{display:flex;justify-content:space-between;font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 .cond-val{font-size:32px;font-weight:700;}
 .matrix-row-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;}
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
@@ -60,16 +60,16 @@ select{background:var(--bg3);color:var(--text);border:1px solid var(--border);bo
 <script>
 const URL_CSV = "dataset_final.csv";
 let dfPred = [];
-// Declaración global limpia de los objetos de gráficos para evitar el ReferenceError
 let chartPredObj = null, chartOilObj = null;
 
+// Ajustado a Agosto de 2025 para mantener consistencia estricta con tu dataset real
 function generarBackupData() {
   const backup = [];
   for(let p=1; p<=24; p++) {
     const well = `P-${String(p).padStart(2,'0')}`;
     for(let i=0; i<15; i++) {
       backup.push({
-        Well_ID: well, Date: `2026-05-${String(i+1).padStart(2,'0')}`,
+        Well_ID: well, Date: `2025-08-${String(i+1).padStart(2,'0')}`,
         Oil: 1100 - (i*8) + Math.random()*15, Water: 130 + (i*12) + Math.random()*10,
         Real: Math.max(0, 400-i), Pred: Math.max(0, 395-i + Math.random()*8)
       });
@@ -84,16 +84,22 @@ function parsearCSV(texto) {
   const sep = lineas[0].includes(';') ? ';' : ',';
   const cab = lineas[0].split(sep).map(c => c.trim().toLowerCase());
   
-  const idxW = cab.findIndex(c => c.includes('well') || c.includes('pozo')), idxD = cab.findIndex(c => c.includes('date') || c.includes('fecha'));
-  const idxO = cab.findIndex(c => c.includes('oil') || c.includes('q_o')), idxWc = cab.findIndex(c => c.includes('water') || c.includes('q_w'));
-  const idxR = cab.findIndex(c => c.includes('restantes') || c.includes('rul')), idxP = cab.findIndex(c => c.includes('prediccion') || c.includes('lstm'));
+  const idxW = cab.findIndex(c => c === 'well_id' || c.includes('well') || c.includes('pozo'));
+  const idxD = cab.findIndex(c => c === 'date' || c.includes('fecha') || c.includes('time'));
+  const idxO = cab.findIndex(c => c.includes('oil_rate') || c === 'oil' || c.includes('petroleo') || c.includes('q_o'));
+  const idxWc = cab.findIndex(c => c.includes('water_rate') || c === 'water' || c.includes('agua') || c.includes('q_w'));
+  const idxR = cab.findIndex(c => c.includes('restantes') || c.includes('real') || c.includes('rul'));
+  const idxP = cab.findIndex(c => c.includes('prediccion') || c.includes('lstm') || c.includes('pred'));
 
   return lineas.slice(1).map(l => {
     const col = l.split(sep);
     return {
-      Well_ID: col[idxW>=0?idxW:0]?.trim() || "P-01", Date: col[idxD>=0?idxD:1]?.trim() || "",
-      Oil: parseFloat(col[idxO>=0?idxO:2]) || 0, Water: parseFloat(col[idxWc>=0?idxWc:3]) || 0,
-      Real: parseFloat(col[idxR>=0?idxR:4]) || 0, Pred: parseFloat(col[idxP>=0?idxP:5]) || 0
+      Well_ID: col[idxW >= 0 ? idxW : 0]?.trim() || "P-01", 
+      Date: col[idxD >= 0 ? idxD : 1]?.trim() || "",
+      Oil: parseFloat(col[idxO >= 0 ? idxO : 2]) || 0, 
+      Water: parseFloat(col[idxWc >= 0 ? idxWc : 3]) || 0,
+      Real: parseFloat(col[idxR >= 0 ? idxR : 4]) || 0, 
+      Pred: parseFloat(col[idxP >= 0 ? idxP : 5]) || 0
     };
   });
 }
@@ -104,7 +110,7 @@ async function init() {
     if(!res.ok) throw new Error();
     dfPred = parsearCSV(await res.text());
     document.getElementById('statusPill').className = 'status-pill ok';
-    document.getElementById('statusPill').textContent = '● CSV Conectado';
+    document.getElementById('statusPill').textContent = '● Origen CSV Conectado';
   } catch {
     dfPred = generarBackupData();
     document.getElementById('statusPill').className = 'status-pill warn';
@@ -129,15 +135,22 @@ function render() {
   document.getElementById('val3').textContent = `${Math.round(ult.Pred)} Días`;
 
   const dates = filtered.map(r => r.Date);
-  const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+  const opt = { 
+    responsive: true, 
+    maintainAspectRatio: false, 
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono', size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono', size: 10 } } }
+    }
+  };
 
-  // Manejo e instanciación de gráficos libre de ReferenceError
   if(chartPredObj) chartPredObj.destroy();
   chartPredObj = new Chart(document.getElementById('chartPred'), {
     type: 'line',
     data: { labels: dates, datasets: [
-      { label: 'Real', data: filtered.map(r=>r.Real), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0 },
-      { label: 'LSTM', data: filtered.map(r=>r.Pred), borderColor: '#ff3c5a', borderWidth: 2, borderDash: [4,4], pointRadius: 0 }
+      { label: 'Real', data: filtered.map(r=>r.Real), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0, tension: 0.1 },
+      { label: 'LSTM', data: filtered.map(r=>r.Pred), borderColor: '#ff3c5a', borderWidth: 2, borderDash: [4,4], pointRadius: 0, tension: 0.1 }
     ]}, options: opt
   });
 
@@ -145,8 +158,8 @@ function render() {
   chartOilObj = new Chart(document.getElementById('chartOilWater'), {
     type: 'line',
     data: { labels: dates, datasets: [
-      { label: 'Oil', data: filtered.map(r=>r.Oil), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0 },
-      { label: 'Water', data: filtered.map(r=>r.Water), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 0 }
+      { label: 'Oil', data: filtered.map(r=>r.Oil), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0, tension: 0.1 },
+      { label: 'Water', data: filtered.map(r=>r.Water), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 0, tension: 0.1 }
     ]}, options: opt
   });
 }
