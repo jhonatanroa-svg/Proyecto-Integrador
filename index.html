@@ -3,174 +3,392 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tablero de Seguimiento Preventivo - Carga Directa</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<title>Tablero de Seguimiento Preventivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root {
-  --bg: #080b12; --bg2: #0e1220; --bg3: #141828; --border: rgba(255,255,255,0.06);
-  --green: #00e5a0; --blue: #3b9eff; --pink: #ff6eb4; --red: #ff3c5a;
-  --text: #e8eaf0; --muted: #5a6278; --dim: #9ca3af;
+:root{
+  --bg:#080b12;--bg2:#0e1220;--bg3:#141828;
+  --border:rgba(255,255,255,0.06);
+  --green:#00e5a0;--blue:#3b9eff;--pink:#ff6eb4;--amber:#ffb830;--red:#ff3c5a;--purple:#a78bfa;
+  --text:#e8eaf0;--muted:#5a6278;--dim:#9ca3af;
+  --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:10px;
 }
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Syne',sans-serif;}
-body{background:var(--bg);color:var(--text);padding:1.5rem 2rem;}
-.header{display:flex;justify-content:space-between;align-items:center;padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1rem;}
-.header-title{font-size:20px;font-weight:800;text-transform:uppercase;}
-.header-title span{color:var(--green);}
-.status-pill{font-size:11px;font-family:'JetBrains Mono';padding:5px 12px;border-radius:20px;border:1px solid var(--border);}
-.status-pill.waiting{border-color:#ffb830;color:#ffb830;background:rgba(255,184,48,0.05);}
-.status-pill.ready{border-color:var(--green);color:var(--green);background:rgba(0,229,160,0.05);}
-
-.control-panel{background:var(--bg2);padding:1.25rem;border-radius:12px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-bottom:1.5rem;}
-.control-group{display:flex;flex-direction:column;gap:6px;}
-.control-group label{font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
-
-input[type="file"]{color:var(--dim);font-size:12px;font-family:'JetBrains Mono';}
-select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;font-family:'JetBrains Mono';cursor:pointer;}
-
-.conditions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.5rem;}
-.cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
-.cond-header{font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
-.cond-val{font-size:32px;font-weight:700;}
-
-.matrix-row-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;}
-.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
-.chart-title{font-size:11px;font-family:'JetBrains Mono';color:var(--dim);text-transform:uppercase;margin-bottom:1rem;display:block;}
-.chart-wrap{position:relative;height:260px;width:100%;}
-@media(max-width:900px){.matrix-row-grid,.conditions-grid{grid-template-columns:1fr;}}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
+#loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
+#loadingScreen h2{font-size:20px;font-weight:800;letter-spacing:.04em;}
+#loadingScreen p{font-size:12px;color:var(--muted);font-family:var(--mono);}
+.spinner{width:44px;height:44px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:18px 28px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.h-title{font-size:18px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
+.h-title span{color:var(--green);}
+.h-sub{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px;}
+.pill{font-size:10px;font-family:var(--mono);padding:5px 14px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.pill.ok{border-color:var(--green);color:var(--green);}
+.pill.err{border-color:var(--red);color:var(--red);}
+.filters{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 28px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.fg{display:flex;align-items:center;gap:8px;}
+.fg label{font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
+select,input[type=date]{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;font-family:var(--mono);cursor:pointer;min-width:130px;}
+select{padding-right:26px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;}
+select:focus,input:focus{outline:none;border-color:var(--green);}
+.btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:10px;font-family:var(--mono);cursor:pointer;transition:.2s;}
+.btn-reset:hover{border-color:var(--green);color:var(--green);}
+.main{padding:20px 28px;display:flex;flex-direction:column;gap:16px;}
+.cond-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.cond{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;}
+.cond::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.cond.c-green::before{background:var(--green);}
+.cond.c-red::before{background:var(--red);}
+.cond.c-amber::before{background:var(--amber);}
+.cond-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.cond-name{font-size:9px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;line-height:1.5;}
+.badge{font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:10px;white-space:nowrap;}
+.bg-green{background:rgba(0,229,160,.1);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+.bg-red{background:rgba(255,60,90,.1);color:var(--red);border:1px solid rgba(255,60,90,.2);}
+.bg-amber{background:rgba(255,184,48,.1);color:var(--amber);border:1px solid rgba(255,184,48,.2);}
+.cond-val{font-size:36px;font-weight:700;line-height:1;margin-bottom:4px;}
+.cond-desc{font-size:10px;color:var(--dim);font-family:var(--mono);line-height:1.5;}
+.cond-limit{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:8px;}
+.pbar{height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:10px;overflow:hidden;}
+.pfill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+.row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.cc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.cc-title{font-size:9px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.07em;}
+.leg{display:flex;gap:10px;flex-wrap:wrap;}
+.li{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);font-family:var(--mono);}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.cw{position:relative;width:100%;}
+.h360{height:360px;}
+.h220{height:220px;}
+@media(max-width:1100px){.row-3{grid-template-columns:1fr 1fr;}.cond-row{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.row-3{grid-template-columns:1fr;}.cond-row{grid-template-columns:1fr;}.main{padding:14px;}.header,.filters{padding:12px 14px;}}
 </style>
 </head>
 <body>
-
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <h2>Tablero de <span style="color:var(--green)">Seguimiento Preventivo</span></h2>
+  <p id="loadMsg">Conectando con repositorio...</p>
+</div>
+<div id="app" style="display:none;">
 <div class="header">
   <div>
-    <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
+    <div class="h-title">Tablero de <span>Seguimiento Preventivo</span></div>
+    <div class="h-sub">Modelo LSTM · Predicción de vida útil por pozo · Fuente: GitHub · Última fecha: Agosto 2025</div>
   </div>
-  <div id="statusPill" class="status-pill waiting">Esperando archivo CSV...</div>
+  <div id="pill" class="pill">Cargando...</div>
 </div>
-
-<div class="control-panel">
-  <div class="control-group">
-    <label>1. Cargar Base de Datos (CSV)</label>
-    <input type="file" id="csvFileInput" accept=".csv" />
+<div class="filters">
+  <div class="fg"><label>Pozo (Well_ID)</label>
+    <select id="fWell"><option value="ALL">Todos los pozos</option></select></div>
+  <div class="fg"><label>Desde</label><input type="date" id="fFrom"/></div>
+  <div class="fg"><label>Hasta</label><input type="date" id="fTo"/></div>
+  <button class="btn-reset" id="btnReset">↺ Resetear filtros</button>
+</div>
+<div class="main">
+  <div class="cond-row">
+    <div class="cond" id="c1">
+      <div class="cond-top"><div class="cond-name">Condición 1<br>Caída de Petróleo</div><span class="badge" id="b1">—</span></div>
+      <div class="cond-val" id="v1">—</div>
+      <div class="cond-desc">Registros con caída de Oil Rate &gt; 25% respecto al período anterior</div>
+      <div class="cond-limit">Límite crítico: &gt; 25% registros → ROJO</div>
+      <div class="pbar"><div class="pfill" id="p1"></div></div>
+    </div>
+    <div class="cond" id="c2">
+      <div class="cond-top"><div class="cond-name">Condición 2<br>Water Cut</div><span class="badge" id="b2">—</span></div>
+      <div class="cond-val" id="v2">—</div>
+      <div class="cond-desc">Registros con Water Cut superior al 80% del fluido total producido</div>
+      <div class="cond-limit">Límite crítico: &gt; 80% registros → ROJO</div>
+      <div class="pbar"><div class="pfill" id="p2"></div></div>
+    </div>
+    <div class="cond" id="c3">
+      <div class="cond-top"><div class="cond-name">Condición 3<br>Recuperación Futura LSTM</div><span class="badge" id="b3">—</span></div>
+      <div class="cond-val" id="v3">—</div>
+      <div class="cond-desc">Registros donde predicción LSTM &lt; 75% de los días reales restantes</div>
+      <div class="cond-limit">Límite crítico: &gt; 75% registros afectados → ROJO</div>
+      <div class="pbar"><div class="pfill" id="p3"></div></div>
+    </div>
   </div>
-  <div class="control-group">
-    <label>2. Seleccionar Pozo Activo</label>
-    <select id="wellSel" disabled><option>Cargue un archivo primero...</option></select>
+  <div class="row-3">
+    <div class="cc">
+      <div class="cc-head">
+        <span class="cc-title" id="titleLSTM">Modelo LSTM — Días Restantes</span>
+        <div class="leg">
+          <div class="li"><span class="ld" style="background:var(--green);"></span>Real</div>
+          <div class="li"><span class="ld" style="background:var(--red);"></span>LSTM</div>
+          <div class="li"><span class="ld" style="background:var(--amber);width:3px;height:10px;"></span>Umbral 90d</div>
+        </div>
+      </div>
+      <div class="cw h360"><canvas id="cLSTM"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-head">
+        <span class="cc-title">Tasas Diarias de Producción</span>
+        <div class="leg">
+          <div class="li"><span class="ld" style="background:var(--green);"></span>Oil</div>
+          <div class="li"><span class="ld" style="background:var(--blue);"></span>Water</div>
+          <div class="li"><span class="ld" style="background:var(--pink);"></span>Gas</div>
+        </div>
+      </div>
+      <div class="cw h360"><canvas id="cTriv"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-head"><span class="cc-title">Uptime Diario (%)</span></div>
+      <div class="cw h360"><canvas id="cUptime"></canvas></div>
+    </div>
+  </div>
+  <div class="row-3">
+    <div class="cc">
+      <div class="cc-head"><span class="cc-title">Nº Días por Nivel de Alerta</span></div>
+      <div class="cw h220"><canvas id="cAlerts"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-head"><span class="cc-title">% Método de Extracción (Lift System)</span></div>
+      <div class="cw h220"><canvas id="cLiftPct"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-head"><span class="cc-title">Producción de Barriles por Método (Oil_rate_bbl_d)</span></div>
+      <div class="cw h220"><canvas id="cBblLift"></canvas></div>
+    </div>
   </div>
 </div>
-
-<div class="conditions-grid">
-  <div class="cond-card"><div class="cond-header">Petróleo Neto</div><div class="cond-val" id="val1" style="color:var(--green)">—</div></div>
-  <div class="cond-card"><div class="cond-header">Agua Asociada</div><div class="cond-val" id="val2" style="color:var(--blue)">—</div></div>
-  <div class="cond-card"><div class="cond-header">Proyección RUL (LSTM)</div><div class="cond-val" id="val3" style="color:var(--pink)">—</div></div>
 </div>
-
-<div class="matrix-row-grid">
-  <div class="chart-card"><span class="chart-title">Vida Útil Restante (Días Reales vs Predicción LSTM)</span><div class="chart-wrap"><canvas id="chartPred"></canvas></div></div>
-  <div class="chart-card"><span class="chart-title">Historial Dinámico de Fluidos (bbl/d)</span><div class="chart-wrap"><canvas id="chartOilWater"></canvas></div></div>
-</div>
-
 <script>
-let dfPred = [];
-let chartPredObj = null, chartOilObj = null;
-
-// Lector directo de archivos de disco (Elimina problemas de red y bloqueos de seguridad del navegador)
-document.getElementById('csvFileInput').addEventListener('change', function(e) {
-  const archivo = e.target.files[0];
-  if (!archivo) return;
-
-  const lector = new FileReader();
-  lector.onload = function(evt) {
-    dfPred = parsearCSV(evt.target.result);
-    if(dfPred.length > 0) {
-      document.getElementById('statusPill').className = 'status-pill ready';
-      document.getElementById('statusPill').textContent = `● ${dfPred.length} Registros Cargados Exitosamente`;
-      activarSelectorPozos();
-    } else {
-      alert("No se pudieron reconocer las columnas. Verifica la estructura del CSV.");
+const CSV_URL = "https://raw.githubusercontent.com/jhonatanroa-svg/Proyecto-Integrador/main/DATASET_LSTM.csv";
+let RAW = [], CHARTS = {};
+function parseCSV(txt) {
+  const lines = txt.trim().split('\n');
+  const hdr = lines[0].split(',').map(h => h.replace(/\r/g,'').trim());
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const cols = []; let cur = '', inQ = false;
+    for (const c of line) {
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += c;
     }
-  };
-  lector.readAsText(archivo);
-});
-
-function parsearCSV(texto) {
-  const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
-  if(lineas.length < 2) return [];
-  
-  const sep = lineas[0].includes(';') ? ';' : ',';
-  const cab = lineas[0].split(sep).map(c => c.trim().toLowerCase());
-  
-  // Indexación estricta por palabras clave del encabezado real de tu dataset
-  const idxW = cab.findIndex(c => c === 'well_id' || c.includes('well') || c.includes('pozo'));
-  const idxD = cab.findIndex(c => c === 'date' || c.includes('fecha') || c.includes('time'));
-  const idxO = cab.findIndex(c => c.includes('oil') || c.includes('petroleo') || c.includes('q_o'));
-  const idxWc = cab.findIndex(c => c.includes('water') || c.includes('agua') || c.includes('q_w'));
-  const idxR = cab.findIndex(c => c.includes('restantes') || c.includes('real') || c.includes('rul'));
-  const idxP = cab.findIndex(c => c.includes('prediccion') || c.includes('lstm') || c.includes('pred'));
-
-  return lineas.slice(1).map(l => {
-    const col = l.split(sep);
-    return {
-      Well_ID: col[idxW >= 0 ? idxW : 0]?.trim() || "P-01", 
-      Date: col[idxD >= 0 ? idxD : 1]?.trim() || "",
-      Oil: parseFloat(col[idxO >= 0 ? idxO : 2]) || 0, 
-      Water: parseFloat(col[idxWc >= 0 ? idxWc : 3]) || 0,
-      Real: parseFloat(col[idxR >= 0 ? idxR : 4]) || 0, 
-      Pred: parseFloat(col[idxP >= 0 ? idxP : 5]) || 0
-    };
+    cols.push(cur.replace(/\r/g,'').trim());
+    const obj = {};
+    hdr.forEach((h, i) => obj[h] = (cols[i] || '').replace(/^"|"$/g, '').trim());
+    return obj;
   });
 }
-
-function activarSelectorPozos() {
-  const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
-  const sel = document.getElementById('wellSel');
-  sel.removeAttribute('disabled');
-  sel.innerHTML = wells.map(w => `<option value="${w}">Pozo ${w}</option>`).join('');
-  sel.addEventListener('change', render);
-  render();
+function parseDate(s) {
+  if (!s) return null;
+  s = s.trim();
+  if (s.includes('/')) {
+    const p = s.split('/');
+    if (p[0].length === 4) return new Date(`${p[0]}-${p[1]}-${p[2]}`);
+    if (parseInt(p[1]) > 12) return new Date(`${p[2]}-${p[0]}-${p[1]}`);
+    return new Date(`${p[2]}-${p[1]}-${p[0]}`);
+  }
+  return new Date(s);
 }
-
+function fmtDate(s) {
+  const d = parseDate(s);
+  if (!d || isNaN(d)) return s || '';
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function setMsg(m) { document.getElementById('loadMsg').textContent = m; }
+function setPill(m, st) { const el = document.getElementById('pill'); el.textContent = m; el.className = 'pill ' + (st || ''); }
+async function loadData() {
+  try {
+    setMsg('Cargando DATASET_LSTM.csv desde GitHub...');
+    const r = await fetch(CSV_URL);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const txt = await r.text();
+    RAW = parseCSV(txt);
+    RAW.sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+    setPill('● ' + RAW.length.toLocaleString() + ' registros cargados', 'ok');
+    buildFilters();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    render();
+  } catch (e) {
+    setPill('Error', 'err');
+    setMsg('Error: ' + e.message);
+  }
+}
+function buildFilters() {
+  const wells = [...new Set(RAW.map(r => r.Well_ID))].filter(Boolean).sort();
+  const sel = document.getElementById('fWell');
+  wells.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; sel.appendChild(o); });
+  const dates = RAW.map(r => parseDate(r.Date)).filter(d => d && !isNaN(d)).sort((a, b) => a - b);
+  if (dates.length) {
+    document.getElementById('fFrom').value = dates[0].toISOString().slice(0, 10);
+    document.getElementById('fTo').value = dates[dates.length - 1].toISOString().slice(0, 10);
+  }
+  ['fWell', 'fFrom', 'fTo'].forEach(id => document.getElementById(id).addEventListener('change', render));
+  document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('fWell').value = 'ALL';
+    if (dates.length) {
+      document.getElementById('fFrom').value = dates[0].toISOString().slice(0, 10);
+      document.getElementById('fTo').value = dates[dates.length - 1].toISOString().slice(0, 10);
+    }
+    render();
+  });
+}
+function getFiltered() {
+  const well = document.getElementById('fWell').value;
+  const from = document.getElementById('fFrom').value;
+  const to = document.getElementById('fTo').value;
+  return RAW.filter(r => {
+    if (well !== 'ALL' && r.Well_ID !== well) return false;
+    const d = parseDate(r.Date);
+    if (!d || isNaN(d)) return true;
+    const ds = d.toISOString().slice(0, 10);
+    if (from && ds < from) return false;
+    if (to && ds > to) return false;
+    return true;
+  });
+}
+function kill(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+function thin(arr, max) {
+  if (arr.length <= max) return arr;
+  const step = Math.ceil(arr.length / max);
+  return arr.filter((_, i) => i % step === 0);
+}
+function xAxis(labels, maxTicks) {
+  return {
+    ticks: { maxTicksLimit: maxTicks || 14, maxRotation: 35, autoSkip: true, font: { size: 9, family: "'JetBrains Mono'" }, color: '#5a6278', callback: (_, i) => labels[i] },
+    grid: { color: 'rgba(255,255,255,0.03)' }, border: { color: 'rgba(255,255,255,0.05)' }
+  };
+}
+function yAxis(color) {
+  return {
+    ticks: { font: { size: 9, family: "'JetBrains Mono'" }, color: color || '#9ca3af' },
+    grid: { color: 'rgba(255,255,255,0.03)' }, border: { color: 'rgba(255,255,255,0.05)' }
+  };
+}
+function setCard(cid, vid, bid, pid, val, label, pct, cClass, bClass, color) {
+  document.getElementById(vid).textContent = val;
+  document.getElementById(vid).style.color = color;
+  document.getElementById(bid).textContent = label;
+  document.getElementById(bid).className = 'badge ' + bClass;
+  document.getElementById(cid).className = 'cond ' + cClass;
+  const pf = document.getElementById(pid);
+  pf.style.width = Math.min(pct, 100) + '%';
+  pf.style.background = color;
+}
 function render() {
-  const well = document.getElementById('wellSel').value;
-  // Ordenamiento cronológico estricto basado en las fechas nativas del archivo
-  const filtered = dfPred.filter(r => r.Well_ID === well).sort((a,b) => new Date(a.Date) - new Date(b.Date));
-  if(!filtered.length) return;
-  
-  const ult = filtered[filtered.length - 1];
-  document.getElementById('val1').textContent = `${ult.Oil.toFixed(1)} bbl/d`;
-  document.getElementById('val2').textContent = `${ult.Water.toFixed(1)} bbl/d`;
-  document.getElementById('val3').textContent = `${Math.round(ult.Pred)} Días`;
-
-  const dates = filtered.map(r => r.Date);
-  const opt = { 
-    responsive: true, 
-    maintainAspectRatio: false, 
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono', size: 10 } } },
-      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono', size: 10 } } }
+  const data = getFiltered();
+  if (!data.length) return;
+  const well = document.getElementById('fWell').value;
+  document.getElementById('titleLSTM').textContent = well === 'ALL' ? 'Modelo LSTM — Campo Completo' : 'Modelo LSTM — Pozo: ' + well;
+  const total = data.length;
+  const oils = data.map(r => parseFloat(r.Oil_rate_bbl_d) || 0);
+  const caidas = data.filter((_, i) => i > 0 && oils[i] > 0 && oils[i-1] > 0 && oils[i] < oils[i-1] * 0.75).length;
+  const p1 = Math.round((caidas / total) * 100);
+  const cr1 = p1 > 25;
+  setCard('c1','v1','b1','p1', p1+'%', cr1?'🔴 CRÍTICO':p1>15?'🟡 ALERTA':'🟢 NORMAL', p1, cr1?'c-red':p1>15?'c-amber':'c-green', cr1?'bg-red':p1>15?'bg-amber':'bg-green', cr1?'var(--red)':p1>15?'var(--amber)':'var(--green)');
+  const wcH = data.filter(r => { const o=parseFloat(r.Oil_rate_bbl_d)||0, w=parseFloat(r.Water_rate_bbl_d)||0; return (o+w)>0 && (w/(o+w))>0.8; }).length;
+  const p2 = Math.round((wcH / total) * 100);
+  const cr2 = p2 > 80;
+  setCard('c2','v2','b2','p2', p2+'%', cr2?'🔴 CRÍTICO':p2>50?'🟡 ALERTA':'🟢 NORMAL', p2, cr2?'c-red':p2>50?'c-amber':'c-green', cr2?'bg-red':p2>50?'bg-amber':'bg-green', cr2?'var(--red)':p2>50?'var(--amber)':'var(--green)');
+  const bajaR = data.filter(r => { const d=parseFloat(r.Prediccion_LSTM_Dias)||0, re=parseFloat(r.Dias_Restantes)||1; return re>0 && (d/re)<0.75; }).length;
+  const p3 = Math.round((bajaR / total) * 100);
+  const cr3 = p3 > 75;
+  setCard('c3','v3','b3','p3', p3+'%', cr3?'🔴 CRÍTICO':p3>50?'🟡 ALERTA':'🟢 NORMAL', p3, cr3?'c-red':p3>50?'c-amber':'c-green', cr3?'bg-red':p3>50?'bg-amber':'bg-green', cr3?'var(--red)':p3>50?'var(--amber)':'var(--green)');
+  const MAX = 250;
+  const dt = thin(data, MAX);
+  const labels = dt.map(r => fmtDate(r.Date));
+  kill('lstm');
+  CHARTS['lstm'] = new Chart(document.getElementById('cLSTM'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Real', data: dt.map(r=>parseFloat(r.Dias_Restantes)||null), borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,0.04)', borderWidth:2, pointRadius:0, tension:0.3, fill:true },
+      { label:'LSTM', data: dt.map(r=>parseFloat(r.Prediccion_LSTM_Dias)||null), borderColor:'#ff3c5a', backgroundColor:'rgba(255,60,90,0.04)', borderWidth:2, pointRadius:0, tension:0.3, borderDash:[6,3], fill:true },
+      { label:'Umbral 90d', data: dt.map(()=>90), borderColor:'#ffb830', borderWidth:1, pointRadius:0, borderDash:[4,4], fill:false }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:i=>i[0].label, label:ctx=>ctx.dataset.label+': '+Math.round(ctx.parsed.y)+' días' }}},
+      scales:{ x:xAxis(labels,14), y:{...yAxis(), title:{display:true,text:'Días',font:{size:9},color:'#5a6278'}} }
     }
-  };
-
-  if(chartPredObj) chartPredObj.destroy();
-  chartPredObj = new Chart(document.getElementById('chartPred'), {
-    type: 'line',
-    data: { labels: dates, datasets: [
-      { label: 'Real', data: filtered.map(r=>r.Real), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0, tension: 0.1 },
-      { label: 'LSTM', data: filtered.map(r=>r.Pred), borderColor: '#ff3c5a', borderWidth: 2, borderDash: [4,4], pointRadius: 0, tension: 0.1 }
-    ]}, options: opt
   });
-
-  if(chartOilObj) chartOilObj.destroy();
-  chartOilObj = new Chart(document.getElementById('chartOilWater'), {
+  kill('triv');
+  CHARTS['triv'] = new Chart(document.getElementById('cTriv'), {
     type: 'line',
-    data: { labels: dates, datasets: [
-      { label: 'Oil', data: filtered.map(r=>r.Oil), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0, tension: 0.1 },
-      { label: 'Water', data: filtered.map(r=>r.Water), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 0, tension: 0.1 }
-    ]}, options: opt
+    data: { labels, datasets: [
+      { label:'Oil', data: dt.map(r=>parseFloat(r.Oil_rate_bbl_d)||null), borderColor:'#00e5a0', borderWidth:2, pointRadius:0, tension:0.3, yAxisID:'y' },
+      { label:'Water', data: dt.map(r=>parseFloat(r.Water_rate_bbl_d)||null), borderColor:'#3b9eff', borderWidth:1.5, pointRadius:0, tension:0.3, yAxisID:'y2' },
+      { label:'Gas', data: dt.map(r=>parseFloat(r.Gas_rate_mscf_d)||null), borderColor:'#ff6eb4', borderWidth:1.5, pointRadius:0, tension:0.3, borderDash:[4,3], yAxisID:'y3' }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{display:false} },
+      scales:{ x: xAxis(labels,14),
+        y:  { position:'left',  ...yAxis('#00e5a0'), title:{display:true,text:'Oil',font:{size:8},color:'#00e5a0'} },
+        y2: { position:'right', ...yAxis('#3b9eff'), grid:{drawOnChartArea:false}, title:{display:true,text:'Water',font:{size:8},color:'#3b9eff'} },
+        y3: { position:'right', ...yAxis('#ff6eb4'), grid:{drawOnChartArea:false}, title:{display:true,text:'Gas',font:{size:8},color:'#ff6eb4'} }
+      }
+    }
+  });
+  const upData = dt.filter(r => r.Uptime_pct !== '' && r.Uptime_pct !== undefined);
+  const upLabels = upData.map(r => fmtDate(r.Date));
+  kill('uptime');
+  CHARTS['uptime'] = new Chart(document.getElementById('cUptime'), {
+    type: 'line',
+    data: { labels: upLabels, datasets: [
+      { label:'Uptime %', data: upData.map(r=>parseFloat(r.Uptime_pct)||null), borderColor:'#a78bfa', backgroundColor:'rgba(167,139,250,0.06)', borderWidth:2, pointRadius:0, tension:0.3, fill:true }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'%' }}},
+      scales:{ x: xAxis(upLabels,14), y:{...yAxis('#a78bfa'), min:0, max:100, title:{display:true,text:'%',font:{size:9},color:'#5a6278'}} }
+    }
+  });
+  const diasCrit = data.filter(r=>parseFloat(r.Prediccion_LSTM_Dias)<30).length;
+  const diasAlert = data.filter(r=>{ const v=parseFloat(r.Prediccion_LSTM_Dias); return v>=30&&v<90; }).length;
+  const diasNorm = data.filter(r=>parseFloat(r.Prediccion_LSTM_Dias)>=90).length;
+  kill('alerts');
+  CHARTS['alerts'] = new Chart(document.getElementById('cAlerts'), {
+    type: 'bar',
+    data: { labels: ['🔴 Alto (<30d)', '🟡 Medio (30-90d)', '🟢 Bajo (>90d)'],
+      datasets: [{ data:[diasCrit,diasAlert,diasNorm], backgroundColor:['#ff3c5a','#ffb830','#00e5a0'], borderRadius:5, borderWidth:0 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>ctx.raw.toLocaleString()+' días' }}},
+      scales:{ x:{ ticks:{font:{size:9,family:"'JetBrains Mono'"},color:'#9ca3af'}, grid:{color:'rgba(255,255,255,0.03)'}, border:{color:'rgba(255,255,255,0.05)'} },
+        y:{ ...yAxis(), title:{display:true,text:'Nº de días',font:{size:9},color:'#5a6278'} }
+      }
+    }
+  });
+  const liftCount = {};
+  data.forEach(r => { const l = r.Lift_system||'N/A'; liftCount[l] = (liftCount[l]||0)+1; });
+  const liftTotal = Object.values(liftCount).reduce((s,v)=>s+v,0);
+  const liftLabels = Object.keys(liftCount);
+  const liftPcts = liftLabels.map(l => parseFloat(((liftCount[l]/liftTotal)*100).toFixed(1)));
+  const colors = ['#3b9eff','#00e5a0','#ff6eb4','#ffb830','#a78bfa','#34d399','#f97316'];
+  kill('liftpct');
+  CHARTS['liftpct'] = new Chart(document.getElementById('cLiftPct'), {
+    type: 'doughnut',
+    data: { labels:liftLabels, datasets:[{ data:liftPcts, backgroundColor:colors.slice(0,liftLabels.length), borderWidth:0, hoverOffset:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ display:true, position:'bottom', labels:{color:'#9ca3af',font:{size:9,family:"'JetBrains Mono'"},padding:10,boxWidth:10} },
+        tooltip:{ callbacks:{ label:ctx=>ctx.label+': '+ctx.raw+'%' }}
+      }
+    }
+  });
+  const bblLift = {};
+  data.forEach(r => { const l=r.Lift_system||'N/A'; bblLift[l]=(bblLift[l]||0)+(parseFloat(r.Oil_rate_bbl_d)||0); });
+  const bblLabels = Object.keys(bblLift).sort((a,b)=>bblLift[b]-bblLift[a]);
+  const bblVals = bblLabels.map(l=>Math.round(bblLift[l]));
+  kill('bbllift');
+  CHARTS['bbllift'] = new Chart(document.getElementById('cBblLift'), {
+    type: 'bar',
+    data: { labels:bblLabels, datasets:[{ data:bblVals, backgroundColor:colors.slice(0,bblLabels.length), borderRadius:5, borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>ctx.raw.toLocaleString()+' bbl' }}},
+      scales:{
+        x:{ ...yAxis(), title:{display:true,text:'bbl',font:{size:9},color:'#5a6278'}, ticks:{ callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v } },
+        y:{ ticks:{font:{size:9,family:"'JetBrains Mono'"},color:'#9ca3af'}, grid:{color:'rgba(255,255,255,0.03)'}, border:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
   });
 }
+loadData();
 </script>
 </body>
 </html>
