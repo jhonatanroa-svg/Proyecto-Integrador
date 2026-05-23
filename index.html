@@ -1,3 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tablero de Seguimiento Preventivo (Sincronizado CSV)</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:        #080b12;
+  --bg2:       #0e1220;
+  --bg3:       #141828;
+  --border:    rgba(255,255,255,0.06);
+  --green:     #00e5a0;
+  --blue:      #3b9eff;
+  --pink:      #ff6eb4;
+  --amber:     #ffb830;
+  --red:       #ff3c5a;
+  --text:      #e8eaf0;
+  --muted:     #5a6278;
+  --dim:       #9ca3af;
+  --font:      'Syne', sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
+
+.header{
+  padding:1.5rem 2rem 1rem; border-bottom:1px solid var(--border); background:var(--bg2);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
+}
+.header-title{font-size:20px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;}
+.header-title span{color:var(--green);}
+.header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
+.status-pill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.status-pill.ok{border-color:var(--green);color:var(--green);}
+.status-pill.warn{border-color:var(--amber);color:var(--amber);}
+
+.filters{
+  display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
+  padding:1rem 2rem;background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.filter-group{display:flex;align-items:center;gap:8px;}
+.filter-group label{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;}
+select,input[type=date]{
+  background:var(--bg3);color:var(--text);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono);cursor:pointer;
+}
+select{padding-right:28px;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;}
+
+.main{padding:1.5rem 2rem;}
+
+.conditions-grid{display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;}
+.cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;}
+.cond-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;}
+.cond-card.verde::after{background:var(--green);}
+.cond-card.rojo::after{background:var(--red);}
+.cond-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.cond-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.cond-badge{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:10px;font-weight:500;}
+.badge-green{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25);}
+.badge-red{background:rgba(255,60,90,.12);color:var(--red);border:1px solid rgba(255,60,90,.25);}
+.cond-val{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
+.cond-desc{font-size:11px;color:var(--dim);font-family:var(--mono);}
+.progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
+.progress-fill{height:100%;transition:width .6s ease;}
+
+.matrix-row-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-bottom: 1.25rem; }
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 340px; display: flex; flex-direction: column; justify-content: space-between;}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.chart-title{font-size:11px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
+.legend{display:flex;gap:12px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono);}
+.leg-dot{width:8px;height:8px;border-radius:2px;}
+.chart-wrap{position:relative;width:100%;height: 250px;}
+
+@media(max-width:900px){ .matrix-row-grid, .conditions-grid {grid-template-columns: 1fr;} }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
+      <div class="header-sub">Análisis Hidrodinámico Cruzado y Vida Útil mediante Redes LSTM</div>
+    </div>
+    <div id="statusPill" class="status-pill">Sincronizando origen...</div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group"><label>Pozo Seleccionado</label><select id="wellSel"><option value="ALL">Cargando...</option></select></div>
+    <div class="filter-group"><label>Desde</label><input type="date" id="dateFrom"/></div>
+    <div class="filter-group"><label>Hasta</label><input type="date" id="dateTo"/></div>
+  </div>
+
+  <div class="main">
+    <div class="conditions-grid">
+      <div class="cond-card" id="card1">
+        <div class="cond-header"><span class="cond-label">Último Flujo de Petróleo</span><span class="cond-badge" id="badge1">—</span></div>
+        <div class="cond-val" id="val1">—</div>
+        <div class="cond-desc">Producción neta estabilizada</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog1" style="width:0%;"></div></div>
+      </div>
+      <div class="cond-card" id="card2">
+        <div class="cond-header"><span class="cond-label">Último Flujo de Agua</span><span class="cond-badge" id="badge2">—</span></div>
+        <div class="cond-val" id="val2">—</div>
+        <div class="cond-desc">Flujo de agua asociado</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;"></div></div>
+      </div>
+      <div class="cond-card" id="card3">
+        <div class="cond-header"><span class="cond-label">Pronóstico LSTM (RUL)</span><span class="cond-badge" id="badge3">—</span></div>
+        <div class="cond-val" id="val3">—</div>
+        <div class="cond-desc">Vida útil restante proyectada</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog3" style="width:0%;"></div></div>
+      </div>
+    </div>
+
+    <div class="matrix-row-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Métrica de Vida Útil Restante (Física vs Algoritmo)</span>
+          <div class="legend">
+            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Días Reales</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ff3c5a;"></span>Predicción LSTM</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartPred"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Comportamiento de Fluidos en Cabezal</span>
+          <div class="legend">
+            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Petróleo (bbl/d)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Agua (bbl/d)</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartOilWater"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const URL_CSV = "dataset_final.csv";
 let dfPred = [], charts = {};
@@ -12,33 +159,29 @@ function generarBackupData() {
   const hoy = new Date();
   for(let p = 1; p <= 24; p++) {
     const wellId = `P-${String(p).padStart(2, '0')}`;
-    for(let i = 0; i < 15; i++) {
-      const d = new Date(hoy); d.setDate(d.getDate() - i);
+    for(let i = 0; i < 20; i++) {
+      const d = new Date(hoy); d.setDate(d.getDate() - (20 - i));
       backup.push({
         Well_ID: wellId,
         Date: d.toISOString().substring(0, 10),
-        Oil_rate_bbl_d: 1200 - (i * 5) + Math.random() * 20,
-        Water_rate_bbl_d: 150 + (i * 8) + Math.random() * 10,
-        Dias_Restantes: 365 - i,
-        Prediccion_LSTM_Dias: 360 - i + Math.random() * 15
+        Oil_rate_bbl_d: Math.max(100, 1100 - (i * 12) + Math.random() * 30),
+        Water_rate_bbl_d: 120 + (i * 15) + Math.random() * 20,
+        Dias_Restantes: Math.max(0, 500 - i),
+        Prediccion_LSTM_Dias: Math.max(0, 495 - i + Math.random() * 12)
       });
     }
   }
   return backup;
 }
 
-// FUNCIÓN OPTIMIZADA A PRUEBA DE FALLAS Y FORMATOS DE EXCEL
 function parsearCSV(texto) {
   const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
   if (lineas.length < 2) return [];
 
-  // Detectar automáticamente si el separador es coma o punto y coma
   const primeraLinea = lineas[0];
   const separador = primeraLinea.includes(';') ? ';' : ',';
-  
   const cabeceras = primeraLinea.split(separador).map(c => c.trim().toLowerCase());
   
-  // Buscar índices usando mapeo flexible por palabras clave
   const idxWell = cabeceras.findIndex(c => c.includes('well') || c.includes('pozo'));
   const idxDate = cabeceras.findIndex(c => c.includes('date') || c.includes('fecha'));
   const idxOil = cabeceras.findIndex(c => c.includes('oil') || c.includes('petroleo') || c.includes('q_o'));
@@ -52,7 +195,6 @@ function parsearCSV(texto) {
     const columnas = lineas[i].split(separador);
     if (columnas.length < 2) continue;
 
-    // Asignar con caídas de seguridad por posición si los nombres fallan por completo
     const wellVal = columnas[idxWell >= 0 ? idxWell : 0]?.trim() || "P-01";
     const dateVal = columnas[idxDate >= 0 ? idxDate : 1]?.trim() || new Date().toISOString().substring(0,10);
     const oilVal = parseFloat(columnas[idxOil >= 0 ? idxOil : 2]) || 0;
@@ -79,12 +221,10 @@ async function loadData(){
     const textoRaw = await response.text();
     dfPred = parsearCSV(textoRaw);
     
-    if(dfPred.length === 0) {
-      throw new Error("Estructura vacía");
-    }
+    if(dfPred.length === 0) throw new Error("Vacio");
     setStatus('● Origen CSV Conectado', 'ok');
   } catch(e) {
-    console.warn("Activando datos de respaldo debido a: ", e.message);
+    console.warn("Activando datos autónomos de respaldo:", e.message);
     dfPred = generarBackupData();
     setStatus('● Modo Autónomo Activado (Respaldo)', 'warn');
   }
@@ -93,11 +233,11 @@ async function loadData(){
 }
 
 function buildFilters(){
-  const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort();
+  const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
   const sel = document.getElementById('wellSel');
   if(!sel) return;
   sel.innerHTML = '';
-  wells.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; sel.appendChild(o); });
+  wells.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = `Pozo: ${w}`; sel.appendChild(o); });
   
   const dates = dfPred.map(r => r.Date).sort();
   if(dates.length){
@@ -132,31 +272,40 @@ function render(){
   if(!data.length) return;
   const sorted = data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
   const dates = sorted.map(r => r.Date);
-
-  // Actualizar paneles dinámicamente con el último registro disponible del pozo
   const ultimo = sorted[sorted.length - 1];
   
   if(document.getElementById('val1')) {
     document.getElementById('val1').textContent = `${ultimo.Oil_rate_bbl_d.toFixed(1)} bbl/d`;
-    document.getElementById('badge1').textContent = '🟢 ACTIVO';
+    document.getElementById('badge1').textContent = '🟢 EN FLUJO';
+    document.getElementById('badge1').className = 'cond-badge badge-green';
     document.getElementById('card1').className = 'cond-card verde';
+    document.getElementById('prog1').style.backgroundColor = 'var(--green)';
     document.getElementById('prog1').style.width = '100%';
   }
 
   if(document.getElementById('val2')) {
     document.getElementById('val2').textContent = `${ultimo.Water_rate_bbl_d.toFixed(1)} bbl/d`;
-    document.getElementById('badge2').textContent = '📊 ESTABLE';
-    document.getElementById('card2').className = 'cond-card verde';
+    document.getElementById('badge2').textContent = '🔵 MEDIDO';
+    document.getElementById('badge2').className = 'cond-badge';
+    document.getElementById('badge2').style.color = 'var(--blue)';
+    document.getElementById('badge2').style.backgroundColor = 'rgba(59,158,255,0.12)';
+    document.getElementById('card2').className = 'cond-card';
+    document.getElementById('prog2').style.backgroundColor = 'var(--blue)';
     document.getElementById('prog2').style.width = '100%';
   }
 
   if(document.getElementById('val3')) {
     document.getElementById('val3').textContent = `${Math.round(ultimo.Prediccion_LSTM_Dias)} Días`;
     document.getElementById('badge3').textContent = '🧠 PROYECTADO';
-    document.getElementById('card3').className = 'cond-card verde';
+    document.getElementById('badge3').className = 'cond-badge';
+    document.getElementById('badge3').style.color = 'var(--pink)';
+    document.getElementById('badge3').style.backgroundColor = 'rgba(255,110,180,0.12)';
+    document.getElementById('card3').className = 'cond-card';
+    document.getElementById('prog3').style.backgroundColor = 'var(--pink)';
     document.getElementById('prog3').style.width = '100%';
   }
 
+  // Gráfico 1: Predicción
   if(charts.pred) charts.pred.destroy();
   const ctxPred = document.getElementById('chartPred');
   if(ctxPred) {
@@ -165,14 +314,23 @@ function render(){
       data: {
         labels: dates,
         datasets: [
-          { label: 'Real', data: sorted.map(r => r.Dias_Restantes), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2 },
-          { label: 'LSTM', data: sorted.map(r => r.Prediccion_LSTM_Dias), borderColor: '#ff3c5a', borderWidth: 2, pointRadius: 2, borderDash: [4, 4] }
+          { label: 'Real', data: sorted.map(r => r.Dias_Restantes), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 },
+          { label: 'LSTM', data: sorted.map(r => r.Prediccion_LSTM_Dias), borderColor: '#ff3c5a', borderWidth: 2, pointRadius: 2, borderDash: [4, 4], fill: false, tension: 0.1 }
         ]
       },
-      options: { responsive: true, maintainAspectRatio: false }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } }
+        }
+      }
     });
   }
 
+  // Gráfico 2: Tasas Hidrodinámicas
   if(charts.oil) charts.oil.destroy();
   const ctxOil = document.getElementById('chartOilWater');
   if(ctxOil) {
@@ -181,14 +339,24 @@ function render(){
       data: {
         labels: dates,
         datasets: [
-          { label: 'Oil', data: sorted.map(r => r.Oil_rate_bbl_d), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2 },
-          { label: 'Water', data: sorted.map(r => r.Water_rate_bbl_d), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 2 }
+          { label: 'Oil', data: sorted.map(r => r.Oil_rate_bbl_d), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 },
+          { label: 'Water', data: sorted.map(r => r.Water_rate_bbl_d), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 }
         ]
       },
-      options: { responsive: true, maintainAspectRatio: false }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } }
+        }
+      }
     });
   }
 }
 
 window.onload = loadData;
 </script>
+</body>
+</html>
