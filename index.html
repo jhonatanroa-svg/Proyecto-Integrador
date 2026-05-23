@@ -3,171 +3,75 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tablero de Seguimiento Preventivo (Sincronizado CSV)</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<title>Tablero de Seguimiento Preventivo (Optimizado)</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root {
-  --bg:        #080b12;
-  --bg2:       #0e1220;
-  --bg3:       #141828;
-  --border:    rgba(255,255,255,0.06);
-  --green:     #00e5a0;
-  --blue:      #3b9eff;
-  --pink:      #ff6eb4;
-  --amber:     #ffb830;
-  --red:       #ff3c5a;
-  --text:      #e8eaf0;
-  --muted:     #5a6278;
-  --dim:       #9ca3af;
-  --font:      'Syne', sans-serif;
-  --mono:      'JetBrains Mono', monospace;
+  --bg: #080b12; --bg2: #0e1220; --bg3: #141828; --border: rgba(255,255,255,0.06);
+  --green: #00e5a0; --blue: #3b9eff; --pink: #ff6eb4; --red: #ff3c5a;
+  --text: #e8eaf0; --muted: #5a6278; --dim: #9ca3af;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
-
-.header{
-  padding:1.5rem 2rem 1rem; border-bottom:1px solid var(--border); background:var(--bg2);
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
-}
-.header-title{font-size:20px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Syne',sans-serif;}
+body{background:var(--bg);color:var(--text);padding:1.5rem 2rem;}
+.header{display:flex;justify-content:between;align-items:center;padding-bottom:1rem;border-b:1px solid var(--border);margin-bottom:1rem;}
+.header-title{font-size:20px;font-weight:800;text-transform:uppercase;}
 .header-title span{color:var(--green);}
-.header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
-.status-pill{font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.status-pill{font-size:11px;font-family:'JetBrains Mono';padding:5px 12px;border-radius:20px;border:1px solid var(--border);}
 .status-pill.ok{border-color:var(--green);color:var(--green);}
-.status-pill.warn{border-color:var(--amber);color:var(--amber);}
-
-.filters{
-  display:flex;gap:1rem;align-items:center;flex-wrap:wrap;
-  padding:1rem 2rem;background:var(--bg2);border-bottom:1px solid var(--border);
-}
-.filter-group{display:flex;align-items:center;gap:8px;}
-.filter-group label{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;}
-select,input[type=date]{
-  background:var(--bg3);color:var(--text);border:1px solid var(--border);
-  border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono);cursor:pointer;
-}
-select{padding-right:28px;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 8px center;}
-
-.main{padding:1.5rem 2rem;}
-
-.conditions-grid{display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;}
-.cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;}
-.cond-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;}
-.cond-card.verde::after{background:var(--green);}
-.cond-card.rojo::after{background:var(--red);}
-.cond-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
-.cond-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-.cond-badge{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:10px;font-weight:500;}
-.badge-green{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25);}
-.badge-red{background:rgba(255,60,90,.12);color:var(--red);border:1px solid rgba(255,60,90,.25);}
-.cond-val{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
-.cond-desc{font-size:11px;color:var(--dim);font-family:var(--mono);}
-.progress-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:10px;overflow:hidden;}
-.progress-fill{height:100%;transition:width .6s ease;}
-
-.matrix-row-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-bottom: 1.25rem; }
-.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem; min-height: 340px; display: flex; flex-direction: column; justify-content: space-between;}
-.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-.chart-title{font-size:11px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
-.legend{display:flex;gap:12px;}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono);}
-.leg-dot{width:8px;height:8px;border-radius:2px;}
-.chart-wrap{position:relative;width:100%;height: 250px;}
-
-@media(max-width:900px){ .matrix-row-grid, .conditions-grid {grid-template-columns: 1fr;} }
+.status-pill.warn{border-color:#ffb830;color:#ffb830;}
+select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-family:'JetBrains Mono';cursor:pointer;}
+.conditions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin:1.5rem 0;}
+.cond-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.cond-header{display:flex;justify-content:between;font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.cond-val{font-size:32px;font-weight:700;}
+.matrix-row-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.chart-title{font-size:11px;font-family:'JetBrains Mono';color:var(--dim);text-transform:uppercase;margin-bottom:1rem;display:block;}
+.chart-wrap{position:relative;height:240px;width:100%;}
+@media(max-width:900px){.matrix-row-grid,.conditions-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
-<div id="app">
-  <div class="header">
-    <div>
-      <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
-      <div class="header-sub">Análisis Hidrodinámico Cruzado y Vida Útil mediante Redes LSTM</div>
-    </div>
-    <div id="statusPill" class="status-pill">Sincronizando origen...</div>
+<div class="header">
+  <div>
+    <div class="header-title">Tablero de <span>Seguimiento Preventivo</span></div>
   </div>
+  <div id="statusPill" class="status-pill">Sincronizando...</div>
+</div>
 
-  <div class="filters">
-    <div class="filter-group"><label>Pozo Seleccionado</label><select id="wellSel"><option value="ALL">Cargando...</option></select></div>
-    <div class="filter-group"><label>Desde</label><input type="date" id="dateFrom"/></div>
-    <div class="filter-group"><label>Hasta</label><input type="date" id="dateTo"/></div>
-  </div>
+<div style="background:var(--bg2);padding:1rem;border-radius:8px;border:1px solid var(--border);">
+  <label style="font-size:10px;font-family:'JetBrains Mono';color:var(--muted);text-transform:uppercase;margin-right:8px;">Pozo Activo:</label>
+  <select id="wellSel"></select>
+</div>
 
-  <div class="main">
-    <div class="conditions-grid">
-      <div class="cond-card" id="card1">
-        <div class="cond-header"><span class="cond-label">Último Flujo de Petróleo</span><span class="cond-badge" id="badge1">—</span></div>
-        <div class="cond-val" id="val1">—</div>
-        <div class="cond-desc">Producción neta estabilizada</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog1" style="width:0%;"></div></div>
-      </div>
-      <div class="cond-card" id="card2">
-        <div class="cond-header"><span class="cond-label">Último Flujo de Agua</span><span class="cond-badge" id="badge2">—</span></div>
-        <div class="cond-val" id="val2">—</div>
-        <div class="cond-desc">Flujo de agua asociado</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;"></div></div>
-      </div>
-      <div class="cond-card" id="card3">
-        <div class="cond-header"><span class="cond-label">Pronóstico LSTM (RUL)</span><span class="cond-badge" id="badge3">—</span></div>
-        <div class="cond-val" id="val3">—</div>
-        <div class="cond-desc">Vida útil restante proyectada</div>
-        <div class="progress-bar"><div class="progress-fill" id="prog3" style="width:0%;"></div></div>
-      </div>
-    </div>
+<div class="conditions-grid">
+  <div class="cond-card"><div class="cond-header">Petróleo Neto</div><div class="cond-val" id="val1" style="color:var(--green)">—</div></div>
+  <div class="cond-card"><div class="cond-header">Agua Asociada</div><div class="cond-val" id="val2" style="color:var(--blue)">—</div></div>
+  <div class="cond-card"><div class="cond-header">Proyección RUL (LSTM)</div><div class="cond-val" id="val3" style="color:var(--pink)">—</div></div>
+</div>
 
-    <div class="matrix-row-grid">
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title">Métrica de Vida Útil Restante (Física vs Algoritmo)</span>
-          <div class="legend">
-            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Días Reales</div>
-            <div class="leg-item"><span class="leg-dot" style="background:#ff3c5a;"></span>Predicción LSTM</div>
-          </div>
-        </div>
-        <div class="chart-wrap"><canvas id="chartPred"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title">Comportamiento de Fluidos en Cabezal</span>
-          <div class="legend">
-            <div class="leg-item"><span class="leg-dot" style="background:#00e5a0;"></span>Petróleo (bbl/d)</div>
-            <div class="leg-item"><span class="leg-dot" style="background:#3b9eff;"></span>Agua (bbl/d)</div>
-          </div>
-        </div>
-        <div class="chart-wrap"><canvas id="chartOilWater"></canvas></div>
-      </div>
-    </div>
-  </div>
+<div class="matrix-row-grid">
+  <div class="chart-card"><span class="chart-title">Vida Útil Restante (Días Reales vs LSTM)</span><div class="chart-wrap"><canvas id="chartPred"></canvas></div></div>
+  <div class="chart-card"><span class="chart-title">Historial Dinámico de Fluidos (bbl/d)</span><div class="chart-wrap"><canvas id="chartOilWater"></canvas></div></div>
 </div>
 
 <script>
 const URL_CSV = "dataset_final.csv";
-let dfPred = [], charts = {};
-
-function setStatus(msg, state){ 
-  const el = document.getElementById('statusPill'); 
-  if(el) { el.textContent = msg; el.className = 'status-pill ' + (state || ''); }
-}
+let dfPred = [];
+// Declaración global limpia de los objetos de gráficos para evitar el ReferenceError
+let chartPredObj = null, chartOilObj = null;
 
 function generarBackupData() {
   const backup = [];
-  const hoy = new Date();
-  for(let p = 1; p <= 24; p++) {
-    const wellId = `P-${String(p).padStart(2, '0')}`;
-    for(let i = 0; i < 20; i++) {
-      const d = new Date(hoy); d.setDate(d.getDate() - (20 - i));
+  for(let p=1; p<=24; p++) {
+    const well = `P-${String(p).padStart(2,'0')}`;
+    for(let i=0; i<15; i++) {
       backup.push({
-        Well_ID: wellId,
-        Date: d.toISOString().substring(0, 10),
-        Oil_rate_bbl_d: Math.max(100, 1100 - (i * 12) + Math.random() * 30),
-        Water_rate_bbl_d: 120 + (i * 15) + Math.random() * 20,
-        Dias_Restantes: Math.max(0, 500 - i),
-        Prediccion_LSTM_Dias: Math.max(0, 495 - i + Math.random() * 12)
+        Well_ID: well, Date: `2026-05-${String(i+1).padStart(2,'0')}`,
+        Oil: 1100 - (i*8) + Math.random()*15, Water: 130 + (i*12) + Math.random()*10,
+        Real: Math.max(0, 400-i), Pred: Math.max(0, 395-i + Math.random()*8)
       });
     }
   }
@@ -176,187 +80,78 @@ function generarBackupData() {
 
 function parsearCSV(texto) {
   const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
-  if (lineas.length < 2) return [];
-
-  const primeraLinea = lineas[0];
-  const separador = primeraLinea.includes(';') ? ';' : ',';
-  const cabeceras = primeraLinea.split(separador).map(c => c.trim().toLowerCase());
+  if(lineas.length < 2) return [];
+  const sep = lineas[0].includes(';') ? ';' : ',';
+  const cab = lineas[0].split(sep).map(c => c.trim().toLowerCase());
   
-  const idxWell = cabeceras.findIndex(c => c.includes('well') || c.includes('pozo'));
-  const idxDate = cabeceras.findIndex(c => c.includes('date') || c.includes('fecha'));
-  const idxOil = cabeceras.findIndex(c => c.includes('oil') || c.includes('petroleo') || c.includes('q_o'));
-  const idxWater = cabeceras.findIndex(c => c.includes('water') || c.includes('agua') || c.includes('q_w'));
-  const idxReal = cabeceras.findIndex(c => c.includes('restantes') || c.includes('real') || c.includes('rul'));
-  const idxPred = cabeceras.findIndex(c => c.includes('prediccion') || c.includes('lstm'));
+  const idxW = cab.findIndex(c => c.includes('well') || c.includes('pozo')), idxD = cab.findIndex(c => c.includes('date') || c.includes('fecha'));
+  const idxO = cab.findIndex(c => c.includes('oil') || c.includes('q_o')), idxWc = cab.findIndex(c => c.includes('water') || c.includes('q_w'));
+  const idxR = cab.findIndex(c => c.includes('restantes') || c.includes('rul')), idxP = cab.findIndex(c => c.includes('prediccion') || c.includes('lstm'));
 
-  const resultado = [];
-  
-  for (let i = 1; i < lineas.length; i++) {
-    const columnas = lineas[i].split(separador);
-    if (columnas.length < 2) continue;
-
-    const wellVal = columnas[idxWell >= 0 ? idxWell : 0]?.trim() || "P-01";
-    const dateVal = columnas[idxDate >= 0 ? idxDate : 1]?.trim() || new Date().toISOString().substring(0,10);
-    const oilVal = parseFloat(columnas[idxOil >= 0 ? idxOil : 2]) || 0;
-    const waterVal = parseFloat(columnas[idxWater >= 0 ? idxWater : 3]) || 0;
-    const realVal = parseFloat(columnas[idxReal >= 0 ? idxReal : 4]) || 0;
-    const predVal = parseFloat(columnas[idxPred >= 0 ? idxPred : 5]) || 0;
-
-    resultado.push({
-      Well_ID: wellVal,
-      Date: dateVal,
-      Oil_rate_bbl_d: oilVal,
-      Water_rate_bbl_d: waterVal,
-      Dias_Restantes: realVal,
-      Prediccion_LSTM_Dias: predVal
-    });
-  }
-  return resultado;
+  return lineas.slice(1).map(l => {
+    const col = l.split(sep);
+    return {
+      Well_ID: col[idxW>=0?idxW:0]?.trim() || "P-01", Date: col[idxD>=0?idxD:1]?.trim() || "",
+      Oil: parseFloat(col[idxO>=0?idxO:2]) || 0, Water: parseFloat(col[idxWc>=0?idxWc:3]) || 0,
+      Real: parseFloat(col[idxR>=0?idxR:4]) || 0, Pred: parseFloat(col[idxP>=0?idxP:5]) || 0
+    };
+  });
 }
 
-async function loadData(){
+async function init() {
   try {
-    const response = await fetch(URL_CSV);
-    if (!response.ok) throw new Error("404");
-    const textoRaw = await response.text();
-    dfPred = parsearCSV(textoRaw);
-    
-    if(dfPred.length === 0) throw new Error("Vacio");
-    setStatus('● Origen CSV Conectado', 'ok');
-  } catch(e) {
-    console.warn("Activando datos autónomos de respaldo:", e.message);
+    const res = await fetch(URL_CSV);
+    if(!res.ok) throw new Error();
+    dfPred = parsearCSV(await res.text());
+    document.getElementById('statusPill').className = 'status-pill ok';
+    document.getElementById('statusPill').textContent = '● CSV Conectado';
+  } catch {
     dfPred = generarBackupData();
-    setStatus('● Modo Autónomo Activado (Respaldo)', 'warn');
+    document.getElementById('statusPill').className = 'status-pill warn';
+    document.getElementById('statusPill').textContent = '● Modo Autónomo (Respaldo)';
   }
-  buildFilters();
+  
+  const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const sel = document.getElementById('wellSel');
+  sel.innerHTML = wells.map(w => `<option value="${w}">Pozo ${w}</option>`).join('');
+  sel.addEventListener('change', render);
   render();
 }
 
-function buildFilters(){
-  const wells = [...new Set(dfPred.map(r => r.Well_ID))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
-  const sel = document.getElementById('wellSel');
-  if(!sel) return;
-  sel.innerHTML = '';
-  wells.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = `Pozo: ${w}`; sel.appendChild(o); });
+function render() {
+  const well = document.getElementById('wellSel').value;
+  const filtered = dfPred.filter(r => r.Well_ID === well).sort((a,b) => new Date(a.Date) - new Date(b.Date));
+  if(!filtered.length) return;
   
-  const dates = dfPred.map(r => r.Date).sort();
-  if(dates.length){
-    const fromInput = document.getElementById('dateFrom');
-    const toInput = document.getElementById('dateTo');
-    if(fromInput) fromInput.value = dates[0];
-    if(toInput) toInput.value = dates[dates.length - 1];
-  }
-  ['wellSel', 'dateFrom', 'dateTo'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('change', render);
+  const ult = filtered[filtered.length - 1];
+  document.getElementById('val1').textContent = `${ult.Oil.toFixed(1)} bbl/d`;
+  document.getElementById('val2').textContent = `${ult.Water.toFixed(1)} bbl/d`;
+  document.getElementById('val3').textContent = `${Math.round(ult.Pred)} Días`;
+
+  const dates = filtered.map(r => r.Date);
+  const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+
+  // Manejo e instanciación de gráficos libre de ReferenceError
+  if(chartPredObj) chartPredObj.destroy();
+  chartPredObj = new Chart(document.getElementById('chartPred'), {
+    type: 'line',
+    data: { labels: dates, datasets: [
+      { label: 'Real', data: filtered.map(r=>r.Real), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0 },
+      { label: 'LSTM', data: filtered.map(r=>r.Pred), borderColor: '#ff3c5a', borderWidth: 2, borderDash: [4,4], pointRadius: 0 }
+    ]}, options: opt
+  });
+
+  if(chartOilObj) chartOilObj.destroy();
+  chartOilObj = new Chart(document.getElementById('chartOilWater'), {
+    type: 'line',
+    data: { labels: dates, datasets: [
+      { label: 'Oil', data: filtered.map(r=>r.Oil), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 0 },
+      { label: 'Water', data: filtered.map(r=>r.Water), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 0 }
+    ]}, options: opt
   });
 }
 
-function getFiltered(){
-  const wellSel = document.getElementById('wellSel');
-  if(!wellSel) return dfPred;
-  const well = wellSel.value;
-  const from = document.getElementById('dateFrom')?.value || '';
-  const to = document.getElementById('dateTo')?.value || '';
-  
-  return dfPred.filter(r => {
-    if(r.Well_ID !== well) return false;
-    if(from && r.Date < from) return false;
-    if(to && r.Date > to) return false;
-    return true;
-  });
-}
-
-function render(){
-  const data = getFiltered();
-  if(!data.length) return;
-  const sorted = data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-  const dates = sorted.map(r => r.Date);
-  const ultimo = sorted[sorted.length - 1];
-  
-  if(document.getElementById('val1')) {
-    document.getElementById('val1').textContent = `${ultimo.Oil_rate_bbl_d.toFixed(1)} bbl/d`;
-    document.getElementById('badge1').textContent = '🟢 EN FLUJO';
-    document.getElementById('badge1').className = 'cond-badge badge-green';
-    document.getElementById('card1').className = 'cond-card verde';
-    document.getElementById('prog1').style.backgroundColor = 'var(--green)';
-    document.getElementById('prog1').style.width = '100%';
-  }
-
-  if(document.getElementById('val2')) {
-    document.getElementById('val2').textContent = `${ultimo.Water_rate_bbl_d.toFixed(1)} bbl/d`;
-    document.getElementById('badge2').textContent = '🔵 MEDIDO';
-    document.getElementById('badge2').className = 'cond-badge';
-    document.getElementById('badge2').style.color = 'var(--blue)';
-    document.getElementById('badge2').style.backgroundColor = 'rgba(59,158,255,0.12)';
-    document.getElementById('card2').className = 'cond-card';
-    document.getElementById('prog2').style.backgroundColor = 'var(--blue)';
-    document.getElementById('prog2').style.width = '100%';
-  }
-
-  if(document.getElementById('val3')) {
-    document.getElementById('val3').textContent = `${Math.round(ultimo.Prediccion_LSTM_Dias)} Días`;
-    document.getElementById('badge3').textContent = '🧠 PROYECTADO';
-    document.getElementById('badge3').className = 'cond-badge';
-    document.getElementById('badge3').style.color = 'var(--pink)';
-    document.getElementById('badge3').style.backgroundColor = 'rgba(255,110,180,0.12)';
-    document.getElementById('card3').className = 'cond-card';
-    document.getElementById('prog3').style.backgroundColor = 'var(--pink)';
-    document.getElementById('prog3').style.width = '100%';
-  }
-
-  // Gráfico 1: Predicción
-  if(charts.pred) charts.pred.destroy();
-  const ctxPred = document.getElementById('chartPred');
-  if(ctxPred) {
-    charts.pred = new Chart(ctxPred, {
-      type: 'line',
-      data: {
-        labels: dates,
-        datasets: [
-          { label: 'Real', data: sorted.map(r => r.Dias_Restantes), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 },
-          { label: 'LSTM', data: sorted.map(r => r.Prediccion_LSTM_Dias), borderColor: '#ff3c5a', borderWidth: 2, pointRadius: 2, borderDash: [4, 4], fill: false, tension: 0.1 }
-        ]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } },
-          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } }
-        }
-      }
-    });
-  }
-
-  // Gráfico 2: Tasas Hidrodinámicas
-  if(charts.oil) charts.oil.destroy();
-  const ctxOil = document.getElementById('chartOilWater');
-  if(ctxOil) {
-    charts.oil = new Chart(ctxOil, {
-      type: 'line',
-      data: {
-        labels: dates,
-        datasets: [
-          { label: 'Oil', data: sorted.map(r => r.Oil_rate_bbl_d), borderColor: '#00e5a0', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 },
-          { label: 'Water', data: sorted.map(r => r.Water_rate_bbl_d), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 2, fill: false, tension: 0.1 }
-        ]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } },
-          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6278', font: { family: 'JetBrains Mono' } } }
-        }
-      }
-    });
-  }
-}
-
-window.onload = loadData;
+window.onload = init;
 </script>
 </body>
 </html>
